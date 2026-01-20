@@ -1,0 +1,27 @@
+@import './base.css';
+
+/* 让整个应用占满浏览器宽度，不再限制在居中的 1280px 内 */
+#app {
+  width: 100%;
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+  font-weight: normal;
+}
+
+/* 保留基础链接样式，后续页面有用 */
+a,
+.green {
+  text-decoration: none;
+  color: hsla(160, 100%, 37%, 1);
+  transition: 0.4s;
+  padding: 3px;
+}
+
+@media (hover: hover) {
+  a:hover {
+    background-color: hsla(160, 100%, 37%, 0.2);
+  }
+}
+
+/* 删除原来的 body/#app 居中和两列布局，让页面完全由各自视图控制布局 */
