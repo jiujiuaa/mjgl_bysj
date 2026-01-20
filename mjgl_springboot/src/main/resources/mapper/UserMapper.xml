@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.zjb.mjgl.mapper.UserMapper">
+    
+    <!-- 查询用户列表的字段（不包含密码） -->
+    <sql id="User_List_Columns">
+        id,
+        username,
+        real_name,
+        age,
+        phone,
+        email,
+        role,
+        enabled,
+        created_at
+    </sql>
+    
+    <!-- 查询单个用户的完整字段（包含密码，用于登录验证） -->
+    <sql id="User_Full_Columns">
+        id,
+        username,
+        password,
+        real_name,
+        age,
+        phone,
+        email,
+        role,
+        enabled,
+        created_at
+    </sql>
+    
+    <!-- ResultMap: 将数据库字段映射到 User 实体 -->
+    <resultMap id="UserResultMap" type="com.zjb.mjgl.pojo.entity.User">
+        <id property="id" column="id"/>
+        <result property="username" column="username"/>
+        <result property="password" column="password"/>
+        <result property="realName" column="real_name"/>
+        <result property="age" column="age"/>
+        <result property="phone" column="phone"/>
+        <result property="email" column="email"/>
+        <result property="role" column="role" 
+                typeHandler="org.apache.ibatis.type.EnumTypeHandler"/>
+        <result property="status" column="enabled" 
+                typeHandler="org.apache.ibatis.type.EnumOrdinalTypeHandler"/>
+        <result property="createdAt" column="created_at"/>
+    </resultMap>
+    
+    <!-- 登录时需要查询密码进行验证 -->
+    <select id="selectOneByusername" resultMap="UserResultMap">
+        SELECT
+        <include refid="User_Full_Columns"/>
+        FROM users
+        WHERE username = #{username}
+    </select>
+    
+    <select id="findAuthoritiesByRole" resultType="java.lang.String">
+        SELECT authority 
+        FROM authorities 
+        WHERE role = #{role}
+    </select>
+    
+    <!-- 查询用户列表，不返回密码 -->
+    <select id="getAllUsers" resultMap="UserResultMap">
+        SELECT
+        <include refid="User_List_Columns"/>
+        FROM users
+        ORDER BY created_at DESC
+    </select>
+    
+    <!-- 根据ID查询用户，需要包含密码（用于更新操作） -->
+    <select id="selectOneById" resultMap="UserResultMap">
+        SELECT
+        <include refid="User_Full_Columns"/>
+        FROM users
+        WHERE id = #{id}
+    </select>
+    
+    <!-- 条件查询用户列表，不返回密码 -->
+    <select id="queryUsers" resultMap="UserResultMap">
+        SELECT
+        <include refid="User_List_Columns"/>
+        FROM users
+        <where>
+            <if test="query.realName != null and query.realName != ''">
+                AND real_name LIKE CONCAT('%', #{query.realName}, '%')
+            </if>
+            <if test="query.role != null and query.role != ''">
+                AND role = #{query.role}
+            </if>
+            <if test="query.enabled != null">
+                AND enabled = #{query.enabled}
+            </if>
+            <if test="query.startDate != null">
+                AND created_at &gt;= #{query.startDate}
+            </if>
+            <if test="query.endDate != null">
+                AND created_at &lt;= #{query.endDate}
+            </if>
+        </where>
+        ORDER BY created_at DESC
+    </select>
+    
+    <insert id="insertUser" parameterType="com.zjb.mjgl.pojo.entity.User">
+        INSERT INTO users (id, username, password, enabled, real_name, age, phone, email, created_at,role)
+        VALUES (#{id}, #{username}, #{password}, #{status.code}, #{realName}, #{age}, #{phone}, #{email}, #{createdAt},#{role})
+    </insert>
+    
+    <update id="updateUser" parameterType="com.zjb.mjgl.pojo.entity.User">
+        UPDATE users
+        <set>
+            <if test="realName != null">real_name = #{realName},</if>
+            <if test="age != null">age = #{age},</if>
+            <if test="phone != null">phone = #{phone},</if>
+            <if test="email != null">email = #{email},</if>
+            <if test="role != null">role = #{role},</if>
+            <if test="status != null">enabled = #{status.code},</if>
+            <if test="password != null and password != ''">password = #{password},</if>
+        </set>
+        WHERE id = #{id}
+    </update>
+    
+    <delete id="deleteUserById">
+        DELETE FROM users WHERE id = #{id}
+    </delete>
+</mapper>
