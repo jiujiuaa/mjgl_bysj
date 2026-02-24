@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.zjb.mjgl.mapper.MoldQrcodesMapper">
+
+    <insert id="insertQrcode" parameterType="com.zjb.mjgl.pojo.entity.MoldQrcodes">
+        INSERT INTO mold_qrcodes (
+            id,
+            mold_id,
+            qrcode_type,
+            is_active,
+            created_at
+        ) VALUES (
+            #{id},
+            #{moldId},
+            #{qrcodeType},
+            #{isActive},
+            #{createdAt}
+        )
+    </insert>
+
+    <delete id="deleteByMoldId">
+        DELETE FROM mold_qrcodes WHERE mold_id = #{moldId}
+    </delete>
+
+    <select id="selectByMoldId" resultType="com.zjb.mjgl.pojo.entity.MoldQrcodes">
+        SELECT id, mold_id, qrcode_type, is_active, created_at
+        FROM mold_qrcodes
+        WHERE mold_id = #{moldId}
+        ORDER BY qrcode_type
+    </select>
+</mapper>
+

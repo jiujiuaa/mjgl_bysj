@@ -19,13 +19,31 @@ const router = createRouter({
       component: () => import('@/views/UserManagement.vue'),
       meta: { requiresAuth: true },
     },
+    {
+      path: '/file-manage',
+      name: 'FileManage',
+      component: () => import('@/views/FileManage.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/mold-management',
+      name: 'MoldManagement',
+      component: () => import('@/views/MoldManagement.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/mold-use-records',
+      name: 'MoldUseRecords',
+      component: () => import('@/views/MoldUseRecords.vue'),
+      meta: { requiresAuth: true },
+    },
   ],
 })
 
 // 路由守卫 - 仅检查登录状态（权限后端控制，前端只做显示/隐藏）
 router.beforeEach((to, from, next) => {
   const authStore = useAuthStore()
-  
+
   // 需要登录但未登录，跳转到登录页
   if (to.meta.requiresAuth && !authStore.isAuthenticated) {
     next('/login')

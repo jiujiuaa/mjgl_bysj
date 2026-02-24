@@ -1,0 +1,26 @@
+# 创建 .gitignore（如果还没有）
+cat > .gitignore <<EOF
+# IDE & system
+.idea/
+.vscode/
+.DS_Store
+
+# Java
+target/
+*.iml
+*.class
+
+# Node.js
+node_modules/
+dist/
+npm-debug.log*
+
+# Others
+*.log
+_dummy_*.ipynb
+.spectory
+.cursorindexingignore
+EOF
+# AI Log Plugin 推荐忽略项
+.specstory/
+.ailog/

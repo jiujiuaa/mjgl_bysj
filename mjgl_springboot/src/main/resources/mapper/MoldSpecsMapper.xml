@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.zjb.mjgl.mapper.MoldSpecsMapper">
+
+    <insert id="insertSpecs" parameterType="com.zjb.mjgl.pojo.entity.MoldSpecs">
+        INSERT INTO mold_specs (
+            id,
+            mold_id,
+            dimensions,
+            material,
+            cavity_count,
+            design_life_cycles,
+            design_life_years,
+            key_dimensions,
+            linked_documents
+        ) VALUES (
+            #{id},
+            #{moldId},
+            #{dimensions},
+            #{material},
+            #{cavityCount},
+            #{designLifeCycles},
+            #{designLifeYears},
+            #{keyDimensions},
+            #{linkedDocuments}
+        )
+    </insert>
+
+    <update id="updateSpecsByMoldId" parameterType="com.zjb.mjgl.pojo.entity.MoldSpecs">
+        UPDATE mold_specs
+        <set>
+            <if test="dimensions != null">dimensions = #{dimensions},</if>
+            <if test="material != null">material = #{material},</if>
+            <if test="cavityCount != null">cavity_count = #{cavityCount},</if>
+            <if test="designLifeCycles != null">design_life_cycles = #{designLifeCycles},</if>
+            <if test="designLifeYears != null">design_life_years = #{designLifeYears},</if>
+            <if test="keyDimensions != null">key_dimensions = #{keyDimensions},</if>
+            <if test="linkedDocuments != null">linked_documents = #{linkedDocuments},</if>
+        </set>
+        WHERE mold_id = #{moldId}
+    </update>
+    <delete id="deleteById">
+        DELETE FROM mold_specs WHERE mold_id = #{id}
+    </delete>
+
+    <select id="selectByMoldId" resultType="com.zjb.mjgl.pojo.entity.MoldSpecs">
+        SELECT id, mold_id, dimensions, material, cavity_count,
+               design_life_cycles, design_life_years, key_dimensions, linked_documents
+        FROM mold_specs
+        WHERE mold_id = #{moldId}
+    </select>
+</mapper>
+

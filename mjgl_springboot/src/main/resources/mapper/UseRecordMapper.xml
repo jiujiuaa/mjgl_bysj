@@ -1,0 +1,214 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.zjb.mjgl.mapper.UseRecordMapper">
+
+    <!-- 新增模具使用/借出记录：直接使用 DTO 字段，部分字段在 SQL 中映射/填充默认值 -->
+    <insert id="insert" parameterType="com.zjb.mjgl.pojo.dto.MoldUsageRecordDTO">
+        INSERT INTO mold_usage_records (
+            id,
+            mold_id,
+            usage_type,
+            scheduled_start_time,
+            scheduled_end_time,
+            actual_start_time,
+            actual_end_time,
+            applicant_id,
+            applicant_name,
+            borrower_name,
+            borrower_company,
+            purpose,
+            status,
+            return_inspection_passed,
+            return_remarks,
+            created_at,
+            updated_at
+        )
+        VALUES (
+            #{id},
+            #{moldId},
+            #{usageType},
+            #{scheduledStartTime},
+            #{scheduledEndTime},
+            #{actualStartTime},
+            #{actualEndTime},
+            #{applicantId},
+            #{applicantName},
+            #{borrowerName},
+            #{borrowerCompany},
+            #{purpose},
+            1,
+            CASE
+                WHEN #{inspectionPassed} IS NULL THEN 0
+                WHEN #{inspectionPassed} THEN 1
+                ELSE 0
+            END,
+            #{returnRemarks},
+            NOW(),
+            NOW()
+        )
+    </insert>
+
+    <update id="update" parameterType="com.zjb.mjgl.pojo.dto.MoldUsageRecordDTO">
+        UPDATE mold_usage_records
+        <set>
+            <if test="usageType != null">usage_type = #{usageType},</if>
+            <if test="scheduledStartTime != null">scheduled_start_time = #{scheduledStartTime},</if>
+            <if test="scheduledEndTime != null">scheduled_end_time = #{scheduledEndTime},</if>
+            <if test="actualStartTime != null">actual_start_time = #{actualStartTime},</if>
+            <if test="actualEndTime != null">actual_end_time = #{actualEndTime},</if>
+            <if test="applicantName != null">applicant_name = #{applicantName},</if>
+            <if test="borrowerName != null">borrower_name = #{borrowerName},</if>
+            <if test="borrowerCompany != null">borrower_company = #{borrowerCompany},</if>
+            <if test="purpose != null">purpose = #{purpose},</if>
+            <if test="inspectionPassed != null">return_inspection_passed = #{inspectionPassed, typeHandler=com.zjb.mjgl.typehandler.IntegerBooleanTypeHandler},</if>
+            <if test="returnRemarks != null">return_remarks = #{returnRemarks},</if>
+            updated_at = NOW()
+        </set>
+        WHERE id = #{id}
+    </update>
+
+    <update id="updateStatus">
+        update mold_usage_records set status  = #{status} where id=#{id}
+    </update>
+
+    <delete id="deleteById">
+        DELETE FROM mold_usage_records WHERE id = #{id}
+    </delete>
+
+    <!-- 统计某个模具下，状态为“使用中”(2) 的使用记录数量 -->
+    <select id="countInUseByMoldId" parameterType="java.lang.String" resultType="int">
+        SELECT COUNT(1)
+        FROM mold_usage_records
+        WHERE mold_id = #{moldId}
+          AND status = 2
+    </select>
+
+    <select id="getRecordById" parameterType="java.lang.String"
+            resultType="com.zjb.mjgl.pojo.entity.MoldUsageRecords">
+        SELECT
+            id,
+            mold_id            AS moldId,
+            usage_type         AS usageType,
+            scheduled_start_time AS scheduledStartTime,
+            scheduled_end_time   AS scheduledEndTime,
+            actual_start_time    AS actualStartTime,
+            actual_end_time      AS actualEndTime,
+            applicant_id       AS applicantId,
+            borrower_name      AS borrowerName,
+            borrower_company   AS borrowerCompany,
+            purpose,
+            status,
+            return_inspection_passed AS returnInspectionPassed,
+            return_remarks     AS returnRemarks,
+            created_at         AS createdAt,
+            updated_at         AS updatedAt
+        FROM mold_usage_records
+        WHERE id = #{id}
+    </select>
+
+    <!-- 使用记录列表 VO 映射 -->
+    <resultMap id="moldUsageRecordVoMap" type="com.zjb.mjgl.pojo.vo.MoldUsageRecordVO">
+        <id column="id" property="id"/>
+        <result column="mold_code" property="moldCode"/>
+        <result column="mold_name" property="moldName"/>
+        <result column="mold_category" property="moldCategory"/>
+
+        <result column="usage_type" property="usageType"/>
+
+        <result column="scheduled_start_time" property="scheduledStartTime"
+                typeHandler="com.zjb.mjgl.typehandler.LocalDateTimeTypeHandler"/>
+        <result column="scheduled_end_time" property="scheduledEndTime"
+                typeHandler="com.zjb.mjgl.typehandler.LocalDateTimeTypeHandler"/>
+        <result column="actual_start_time" property="actualStartTime"
+                typeHandler="com.zjb.mjgl.typehandler.LocalDateTimeTypeHandler"/>
+        <result column="actual_end_time" property="actualEndTime"
+                typeHandler="com.zjb.mjgl.typehandler.LocalDateTimeTypeHandler"/>
+
+        <result column="planned_duration_hours" property="plannedDurationHours"/>
+        <result column="actual_duration_hours" property="actualDurationHours"/>
+        <result column="start_time_deviation_hours" property="startTimeDeviationHours"/>
+
+        <result column="applicant_name" property="applicantName"/>
+        <result column="borrower_name" property="borrowerName"/>
+        <result column="borrower_company" property="borrowerCompany"/>
+        <result column="purpose" property="purpose"/>
+
+        <result column="status" property="status"/>
+
+        <result column="return_inspection_passed" property="inspectionPassed"
+                typeHandler="com.zjb.mjgl.typehandler.IntegerBooleanTypeHandler"/>
+        <result column="return_remarks" property="returnRemarks"/>
+
+        <result column="created_at" property="createdAt"
+                typeHandler="com.zjb.mjgl.typehandler.LocalDateTimeTypeHandler"/>
+        <result column="updated_at" property="updatedAt"
+                typeHandler="com.zjb.mjgl.typehandler.LocalDateTimeTypeHandler"/>
+    </resultMap>
+    <sql id="moldUseRecord">
+        SELECT
+            r.id,
+            m.mold_code,
+            m.name AS mold_name,
+            m.category AS mold_category,
+            r.usage_type,
+            r.scheduled_start_time,
+            r.scheduled_end_time,
+            r.actual_start_time,
+            r.actual_end_time,
+            TIMESTAMPDIFF(HOUR, r.scheduled_start_time, r.scheduled_end_time) AS planned_duration_hours,
+            CASE
+                WHEN r.actual_start_time IS NOT NULL AND r.actual_end_time IS NOT NULL
+                    THEN TIMESTAMPDIFF(HOUR, r.actual_start_time, r.actual_end_time)
+                ELSE NULL
+                END AS actual_duration_hours,
+            CASE
+                WHEN r.actual_start_time IS NOT NULL AND r.scheduled_start_time IS NOT NULL
+                    THEN TIMESTAMPDIFF(HOUR, r.scheduled_start_time, r.actual_start_time)
+                ELSE NULL
+                END AS start_time_deviation_hours,
+            r.applicant_name,
+            r.borrower_name,
+            r.borrower_company,
+            r.purpose,
+            r.status,
+            r.return_inspection_passed,
+            r.return_remarks,
+            r.created_at,
+            r.updated_at
+    </sql>
+    <!-- 根据模具ID查询该模具的所有记录，按创建时间倒序 -->
+    <select id="listByMoldId" parameterType="java.lang.String"
+            resultMap="moldUsageRecordVoMap">
+        <include refid="moldUseRecord"></include>
+        FROM mold_usage_records r
+                 LEFT JOIN molds m ON r.mold_id = m.id
+        WHERE r.mold_id = #{moldId}
+        ORDER BY r.created_at DESC
+    </select>
+    <!-- 查询某个申请人创建的所有记录 -->
+    <select id="listByApplicantId" parameterType="java.lang.String"
+            resultMap="moldUsageRecordVoMap">
+        <include refid="moldUseRecord"></include>
+        FROM mold_usage_records r
+                 LEFT JOIN molds m ON r.mold_id = m.id
+        WHERE r.applicant_id = #{applicantId}
+        ORDER BY r.created_at DESC
+    </select>
+
+    <!-- 查询某个模具在某个申请人名下的所有记录 -->
+    <select id="listByMoldIdAndApplicantId" resultMap="moldUsageRecordVoMap">
+        <include refid="moldUseRecord"></include>
+        FROM mold_usage_records r
+                 LEFT JOIN molds m ON r.mold_id = m.id
+        WHERE r.mold_id = #{moldId}
+          AND r.applicant_id = #{applicantId}
+        ORDER BY r.created_at DESC
+    </select>
+
+    <select id="getAllRecord" resultMap="moldUsageRecordVoMap">
+        <include refid="moldUseRecord"></include>
+        FROM mold_usage_records r
+        LEFT JOIN molds m ON r.mold_id = m.id
+        ORDER BY r.created_at DESC
+    </select>
+</mapper>

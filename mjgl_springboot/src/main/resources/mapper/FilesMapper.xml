@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.zjb.mjgl.mapper.FilesMapper">
+    <delete id="deleteByMoldId">
+        DELETE FROM files
+        WHERE biz_type = 'mold'
+          AND biz_id = #{id}
+    </delete>
+
+    <select id="selectByMoldId" resultType="com.zjb.mjgl.pojo.entity.Files">
+        SELECT id,
+               biz_type,
+               biz_id,
+               file_type,
+               original_name,
+               file_name AS fileName,
+               file_path,
+               file_size,
+               upload_user_id,
+               upload_time,
+               description
+        FROM files
+        WHERE biz_type = 'mold'
+          AND biz_id = #{moldId}
+        ORDER BY upload_time DESC
+    </select>
+
+    <insert id="insertBatch">
+        INSERT INTO files (
+            id,
+            biz_type,
+            biz_id,
+            file_type,
+            original_name,
+            file_name,
+            file_path,
+            file_size,
+            upload_user_id,
+            upload_time,
+            description
+        )
+        VALUES
+        <foreach collection="list" item="item" separator=",">
+            (
+                #{item.id},
+                #{item.bizType},
+                #{item.bizId},
+                #{item.fileType},
+                #{item.originalName},
+                #{item.fileName},
+                #{item.filePath},
+                #{item.fileSize},
+                #{item.uploadUserId},
+                #{item.uploadTime},
+                #{item.description}
+            )
+        </foreach>
+    </insert>
+
+    <select id="selectById" resultType="com.zjb.mjgl.pojo.entity.Files">
+        SELECT id,
+               biz_type,
+               biz_id,
+               file_type,
+               original_name,
+               file_name AS fileName,
+               file_path,
+               file_size,
+               upload_user_id,
+               upload_time,
+               description
+        FROM files
+        WHERE id = #{id}
+    </select>
+
+    <select id="selectByIds" resultType="com.zjb.mjgl.pojo.entity.Files">
+        SELECT id,
+               biz_type,
+               biz_id,
+               file_type,
+               original_name,
+               file_name AS fileName,
+               file_path,
+               file_size,
+               upload_user_id,
+               upload_time,
+               description
+        FROM files
+        WHERE id IN
+        <foreach collection="ids" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </select>
+
+    <delete id="deleteByIds">
+        DELETE FROM files
+        WHERE id IN
+        <foreach collection="ids" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+</mapper>

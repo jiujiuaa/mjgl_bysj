@@ -27,6 +27,10 @@ service.interceptors.request.use(
 // 后端返回格式：Result<T> {code, message, data}
 service.interceptors.response.use(
   (response) => {
+    // blob 响应（如下载）直接返回整个 response，由调用方取 response.data
+    if (response.config.responseType === 'blob') {
+      return response
+    }
     const res = response.data
     // 如果code不是200，说明有错误
     if (res.code !== 200) {

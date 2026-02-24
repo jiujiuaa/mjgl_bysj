@@ -7,11 +7,17 @@
       </div>
       <nav class="sidebar-menu">
         <!-- 普通员工不显示“用户管理”菜单，其它业务模块照常显示 -->
-        <div v-if="authStore.isAdmin" class="menu-item active">
+        <div
+          v-if="authStore.isAdmin"
+          class="menu-item active"
+        >
           <span class="menu-icon">👤</span>
           <span>用户管理</span>
         </div>
-        <div class="menu-item disabled">
+        <div
+          class="menu-item"
+          @click="router.push('/mold-management')"
+        >
           <span class="menu-icon">🧱</span>
           <span>模具管理</span>
         </div>
@@ -81,12 +87,14 @@
                     <input
                       v-model="queryForm.startDate"
                       type="datetime-local"
+                      step="3600"
                       placeholder="开始时间"
                       class="filter-input"
                     />
                     <input
                       v-model="queryForm.endDate"
                       type="datetime-local"
+                      step="3600"
                       placeholder="结束时间"
                       class="filter-input"
                     />
