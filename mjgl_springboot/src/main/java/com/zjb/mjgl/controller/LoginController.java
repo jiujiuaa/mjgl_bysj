@@ -1,4 +1,4 @@
-package com.zjb.mjgl.controller;
+/*package com.zjb.mjgl.controller;
 
 import com.zjb.mjgl.common.Result;
 import com.zjb.mjgl.common.UserDetailsImpl;
@@ -71,3 +71,4 @@ public class LoginController {
         return Result.success(); // 👈 只返回成功，data 为 null 或空
     }
 }
+*/

@@ -45,5 +45,8 @@ public class Files {
     @ApiModelProperty(value = "文件说明")
     private String description;
 
+    @ApiModelProperty(value = "业务状态标记：如报修/维修中/完成/验收等")
+    private String imageStatus;
+
 }
 

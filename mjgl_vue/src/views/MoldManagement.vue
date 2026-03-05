@@ -1,60 +1,10 @@
 <template>
   <div class="mold-management-container">
-    <!-- 左侧边栏 -->
-    <aside class="sidebar">
-      <div class="sidebar-header">
-        <div class="sidebar-logo">管理系统</div>
-      </div>
-      <nav class="sidebar-menu">
-        <div
-          class="menu-item"
-          :class="{ active: $route.path === '/user-management' }"
-          @click="goUserManagement"
-        >
-          <span class="menu-icon">👤</span>
-          <span>用户管理</span>
-        </div>
-        <div
-          class="menu-item"
-          :class="{ active: $route.path === '/mold-management' }"
-        >
-          <span class="menu-icon">🧱</span>
-          <span>模具管理</span>
-        </div>
-        <div
-          class="menu-item parent-item"
-          @click="showOpsChildren = !showOpsChildren"
-        >
-          <span class="menu-icon">🛠</span>
-          <span>运维管理</span>
-          <span class="submenu-arrow">{{ showOpsChildren ? '▾' : '▸' }}</span>
-        </div>
-        <div
-          v-if="showOpsChildren"
-          class="menu-item child-item"
-          :class="{ active: $route.path === '/mold-use-records' }"
-          @click="goOps"
-        >
-          <span class="menu-icon">📒</span>
-          <span>使用记录</span>
-        </div>
-        <div class="menu-item disabled">
-          <span class="menu-icon">📈</span>
-          <span>监测与异常</span>
-        </div>
-        <div class="menu-item disabled">
-          <span class="menu-icon">❤️</span>
-          <span>健康评估</span>
-        </div>
-      </nav>
-      <div class="sidebar-footer">
-        <span class="sidebar-username">{{ authStore.username }}</span>
-        <button class="sidebar-logout" @click="handleLogout">退出登录</button>
-      </div>
-    </aside>
+    <!-- 全局左侧边栏 -->
+    <AppSidebar />
 
     <!-- 右侧主区域 -->
-    <div class="layout-main">
+    <div class="layout-main" v-back-to-top>
       <!-- 顶部条 -->
       <header class="top-header">
         <div class="top-title">模具管理</div>
@@ -86,6 +36,15 @@
                 <!-- 查询条件 -->
                 <div class="query-form">
                   <div class="query-row">
+                    <div class="query-item">
+                      <label>选择模具</label>
+                      <select v-model="queryParams.moldId" class="form-input query-input">
+                        <option value="">全部</option>
+                        <option v-for="m in moldOptionsForFilter" :key="m.id" :value="m.id">
+                          {{ (m.moldCode || '') + (m.name ? ` - ${m.name}` : '') || m.id }}
+                        </option>
+                      </select>
+                    </div>
                     <div class="query-item">
                       <label>关键词</label>
                       <input
@@ -209,6 +168,18 @@
                               @click="handleViewUseRecords(item)"
                             >
                               使用记录
+                            </button>
+                            <button
+                              class="action-btn"
+                              @click="handleViewRepairRecords(item)"
+                            >
+                              维修记录
+                            </button>
+                            <button
+                              class="action-btn"
+                              @click="handleViewMaintenanceLogs(item)"
+                            >
+                              保养记录
                             </button>
                             <button
                               class="action-btn edit-btn"
@@ -528,16 +499,34 @@
               />
               <div
                 v-if="selectedFiles.length"
-                class="selected-files"
+                class="file-list selected-file-list"
               >
-                已选择 {{ selectedFiles.length }} 个文件：
-                <span
+                <div
                   v-for="file in selectedFiles"
-                  :key="file.name + file.size"
-                  class="selected-file-item"
+                  :key="file.name + file.size + file.lastModified"
+                  class="file-item"
                 >
-                  {{ file.name }}
-                </span>
+                  <div class="file-main">
+                    <span class="file-name">{{ file.name }}</span>
+                    <span class="file-meta">
+                      {{ (file.size / 1024).toFixed(1) }} KB
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    class="file-preview-btn"
+                    @click="previewTempFile(file)"
+                  >
+                    预览
+                  </button>
+                  <button
+                    type="button"
+                    class="file-delete-btn"
+                    @click="removeSelectedTempFile(file)"
+                  >
+                    删除
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -742,16 +731,34 @@
               />
               <div
                 v-if="detailSelectedFiles.length"
-                class="selected-files"
+                class="file-list selected-file-list"
               >
-                已选择 {{ detailSelectedFiles.length }} 个文件：
-                <span
+                <div
                   v-for="file in detailSelectedFiles"
-                  :key="file.name + file.size"
-                  class="selected-file-item"
+                  :key="file.name + file.size + file.lastModified"
+                  class="file-item"
                 >
-                  {{ file.name }}
-                </span>
+                  <div class="file-main">
+                    <span class="file-name">{{ file.name }}</span>
+                    <span class="file-meta">
+                      {{ (file.size / 1024).toFixed(1) }} KB
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    class="file-preview-btn"
+                    @click="previewTempFile(file)"
+                  >
+                    预览
+                  </button>
+                  <button
+                    type="button"
+                    class="file-delete-btn"
+                    @click="removeDetailSelectedTempFile(file)"
+                  >
+                    删除
+                  </button>
+                </div>
               </div>
             </div>
             <div class="dialog-actions">
@@ -844,7 +851,11 @@
 import { ref, reactive, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { useMoldOptions } from '@/composables/useMoldOptions'
+import AppSidebar from '@/components/AppSidebar.vue'
 import { fetchMolds, queryMolds, createMold, updateMold, deleteMold } from '@/api/molds'
+
+const { moldOptions: moldOptionsForFilter } = useMoldOptions()
 import { uploadBizFiles, getFilePreviewUrl, deleteFiles } from '@/api/files'
 
 const router = useRouter()
@@ -852,6 +863,7 @@ const route = useRoute()
 const authStore = useAuthStore()
 
 const showOpsChildren = ref(true)
+const showMonitoringChildren = ref(true)
 
 const pageNum = ref(1)
 const pageSize = ref(10)
@@ -863,6 +875,7 @@ const moldPage = reactive({
 
 // 查询条件（与后端 MoldQueryParam 对应，注意制造商字段为 manuFacturer）
 const queryParams = reactive({
+  moldId: '',
   keyword: '',
   category: '',
   currentStatus: null,
@@ -929,6 +942,7 @@ const form = ref(emptyForm())
 
 const hasQueryCondition = () => {
   return (
+    (queryParams.moldId && queryParams.moldId.trim()) ||
     (queryParams.keyword && queryParams.keyword.trim()) ||
     (queryParams.category && queryParams.category.trim()) ||
     queryParams.currentStatus != null ||
@@ -942,10 +956,13 @@ const loadMolds = async () => {
   listLoading.value = true
   errorMessage.value = ''
   try {
+    const keywordVal = queryParams.moldId
+      ? (moldOptionsForFilter.value.find((m) => m.id === queryParams.moldId)?.moldCode ?? queryParams.keyword?.trim())
+      : queryParams.keyword?.trim()
     const res = hasQueryCondition()
       ? await queryMolds(
           {
-            keyword: queryParams.keyword?.trim() || undefined,
+            keyword: keywordVal || undefined,
             category: queryParams.category?.trim() || undefined,
             currentStatus: queryParams.currentStatus ?? undefined,
             manuFacturer: queryParams.manuFacturer?.trim() || undefined,
@@ -972,6 +989,7 @@ const handleQuery = () => {
 }
 
 const handleResetQuery = () => {
+  queryParams.moldId = ''
   queryParams.keyword = ''
   queryParams.category = ''
   queryParams.currentStatus = null
@@ -1181,6 +1199,14 @@ const goUserManagement = () => {
   router.push('/user-management')
 }
 
+const goMaintenanceReminders = () => {
+  router.push('/maintenance-reminders')
+}
+
+const goMonitoringManual = () => {
+  router.push('/monitoring-manual')
+}
+
 const handleFilesChange = (event) => {
   const files = Array.from(event.target.files || [])
   selectedFiles.value = files
@@ -1189,6 +1215,37 @@ const handleFilesChange = (event) => {
 const handleDetailFilesChange = (event) => {
   const files = Array.from(event.target.files || [])
   detailSelectedFiles.value = files
+}
+
+const removeSelectedTempFile = (file) => {
+  if (!file) return
+  selectedFiles.value = selectedFiles.value.filter(
+    (f) =>
+      !(
+        f.name === file.name &&
+        f.size === file.size &&
+        f.lastModified === file.lastModified
+      ),
+  )
+}
+
+const removeDetailSelectedTempFile = (file) => {
+  if (!file) return
+  detailSelectedFiles.value = detailSelectedFiles.value.filter(
+    (f) =>
+      !(
+        f.name === file.name &&
+        f.size === file.size &&
+        f.lastModified === file.lastModified
+      ),
+  )
+}
+
+const previewTempFile = (file) => {
+  if (!file) return
+  const url = URL.createObjectURL(file)
+  window.open(url, '_blank')
+  setTimeout(() => URL.revokeObjectURL(url), 60_000)
 }
 
 const handleUploadForDetail = async () => {
@@ -1263,12 +1320,54 @@ const goOps = () => {
   router.push('/mold-use-records')
 }
 
+const goRepairRecords = () => {
+  router.push('/repair-records')
+}
+
+const goMaintenancePlans = () => {
+  router.push('/maintenance-plans')
+}
+
+const goMaintenanceLogs = () => {
+  router.push('/maintenance-logs')
+}
+
 const handleViewUseRecords = (item) => {
   if (!item || !item.id) {
     return
   }
   router.push({
     path: '/mold-use-records',
+    query: {
+      moldId: item.id,
+      moldCode: item.moldCode,
+      moldName: item.name,
+      moldCategory: item.category,
+    },
+  })
+}
+
+const handleViewRepairRecords = (item) => {
+  if (!item || !item.id) {
+    return
+  }
+  router.push({
+    path: '/repair-records',
+    query: {
+      moldId: item.id,
+      moldCode: item.moldCode,
+      moldName: item.name,
+      moldCategory: item.category,
+    },
+  })
+}
+
+const handleViewMaintenanceLogs = (item) => {
+  if (!item || !item.id) {
+    return
+  }
+  router.push({
+    path: '/maintenance-logs',
     query: {
       moldId: item.id,
       moldCode: item.moldCode,
@@ -1340,7 +1439,7 @@ onMounted(() => {
 
 .parent-item {
   font-weight: 600;
-  justify-content: space-between;
+  justify-content: flex-start;
 }
 
 .child-item {

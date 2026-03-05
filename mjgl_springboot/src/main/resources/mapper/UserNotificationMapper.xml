@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.zjb.mjgl.mapper.UserNotificationMapper">
+
+    <resultMap id="UserNotificationResultMap" type="com.zjb.mjgl.pojo.entity.UserNotification">
+        <id     column="id"          property="id"/>
+        <result column="user_id"     property="userId"/>
+        <result column="sender_id"   property="senderId"/>
+        <result column="sender_name" property="senderName"/>
+        <result column="title"       property="title"/>
+        <result column="content"     property="content"/>
+        <result column="type"        property="type"/>
+        <result column="biz_type"    property="bizType"/>
+        <result column="mold_id"     property="moldId"/>
+        <result column="read_flag"   property="readFlag"/>
+        <result column="created_at"  property="createdAt"/>
+        <result column="read_at"     property="readAt"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="com.zjb.mjgl.pojo.entity.UserNotification">
+        INSERT INTO user_notifications (
+            id,
+            user_id,
+            sender_id,
+            sender_name,
+            title,
+            content,
+            type,
+            biz_type,
+            mold_id,
+            read_flag,
+            created_at,
+            read_at
+        ) VALUES (
+            #{id},
+            #{userId},
+            #{senderId},
+            #{senderName},
+            #{title},
+            #{content},
+            #{type},
+            #{bizType},
+            #{moldId},
+            #{readFlag},
+            #{createdAt},
+            #{readAt}
+        )
+    </insert>
+
+    <select id="selectUnreadByUserId" resultMap="UserNotificationResultMap">
+        SELECT
+            id,
+            user_id,
+            sender_id,
+            sender_name,
+            title,
+            content,
+            type,
+            biz_type,
+            mold_id,
+            read_flag,
+            created_at,
+            read_at
+        FROM user_notifications
+        WHERE user_id = #{userId}
+          AND read_flag = 0
+        ORDER BY created_at DESC
+    </select>
+
+    <select id="selectAllByUserId" resultMap="UserNotificationResultMap">
+        SELECT
+            id,
+            user_id,
+            sender_id,
+            sender_name,
+            title,
+            content,
+            type,
+            biz_type,
+            mold_id,
+            read_flag,
+            created_at,
+            read_at
+        FROM user_notifications
+        WHERE user_id = #{userId}
+        ORDER BY created_at DESC
+    </select>
+
+    <update id="markRead">
+        UPDATE user_notifications
+        SET read_flag = 1,
+            read_at   = NOW()
+        WHERE id = #{id}
+    </update>
+
+</mapper>
+

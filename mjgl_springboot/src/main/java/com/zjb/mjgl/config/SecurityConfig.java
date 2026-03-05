@@ -50,6 +50,9 @@ public class SecurityConfig {
                         .requestMatchers(new AntPathRequestMatcher("/getPicCheckCode", POST.name())).permitAll()
                         .requestMatchers(new AntPathRequestMatcher("/login/", GET.name())).permitAll()
                         .requestMatchers(new AntPathRequestMatcher("/api/auth/login")).permitAll()
+                        // WebSocket 握手需要放行，否则连接会被 401 拦截
+                        .requestMatchers(new AntPathRequestMatcher("/api/ws/**")).permitAll()
+                        .requestMatchers(new AntPathRequestMatcher("/ws/**")).permitAll()
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthenticationTokenFilter, UsernamePasswordAuthenticationFilter.class);

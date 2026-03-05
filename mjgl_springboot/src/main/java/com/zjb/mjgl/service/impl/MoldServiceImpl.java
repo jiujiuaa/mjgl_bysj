@@ -123,7 +123,7 @@ public class MoldServiceImpl implements MoldService {
         moldsMapper.deleteById(id);
         moldQrcodesMapper.deleteByMoldId(id);
         moldSpecsMapper.deleteById(id);
-        //TODO需要把minio上面的文件也删除
+        //TODO需要把其他表里面的相关记录删除
         List<Files> files = fileMapper.selectByMoldId(id);
         List<String> objects = files.stream().map(Files::getFilePath).collect(Collectors.toList());
         if(!objects.isEmpty()) {

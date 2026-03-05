@@ -20,3 +20,10 @@ minio:
   secret-key: minioadmin
   bucket-name: mjgl-bucket
 
+# 定时任务配置
+app:
+  job:
+    # 智能预警规则引擎：按 cron 表达式执行，满足条件的模具会生成报警（如近30天故障≥3次）
+    alert-rule:
+      cron: "0 0 4 * * ?"   # 默认每天凌晨 04:00 执行（可改为如 "0 0 */6 * * ?" 每6小时）
+

@@ -58,8 +58,13 @@ public class AuthController {
             // 获取用户角色
             String role = userDetails.getUser().getRole().name(); // ADMIN / INSPECTOR / USER
             log.info(role);
-            // 构建响应 VO（包含角色信息）
-            LoginVO loginVO = new LoginVO(token, userDetails.getUsername(), role);
+            // 构建响应 VO（包含用户ID和角色信息）
+            LoginVO loginVO = new LoginVO(
+                    token,
+                    userDetails.getUser().getId(),
+                    userDetails.getUsername(),
+                    role
+            );
 
             return Result.success(loginVO);
         } catch (BadCredentialsException e) {

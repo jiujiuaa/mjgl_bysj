@@ -15,4 +15,9 @@ public interface FilesService {
      * 根据文件ID生成预览URL（MinIO 临时访问链接）
      */
     String generatePreviewUrl(String fileId);
+
+    /**
+     * 通用：根据业务类型 + 业务ID（可选文件类型）查询文件 VO 列表
+     */
+    List<FileVO> listByBiz(String bizType, String bizId, String fileType);
 }

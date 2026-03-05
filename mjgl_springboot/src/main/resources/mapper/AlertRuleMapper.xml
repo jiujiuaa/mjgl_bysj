@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zjb.mjgl.mapper.AlertRuleMapper">
+
+    <resultMap id="BaseMap" type="com.zjb.mjgl.pojo.entity.AlertRule">
+        <id property="id" column="id"/>
+        <result property="code" column="code"/>
+        <result property="name" column="name"/>
+        <result property="description" column="description"/>
+        <result property="source" column="source"/>
+        <result property="days" column="days"/>
+        <result property="threshold" column="threshold"/>
+        <result property="timeWindowMinutes" column="time_window_minutes"/>
+        <result property="valueThreshold" column="value_threshold"/>
+        <result property="compareOp" column="compare_op"/>
+        <result property="metricType" column="metric_type"/>
+        <result property="metricField" column="metric_field"/>
+        <result property="triggerMode" column="trigger_mode"/>
+        <result property="enabled" column="enabled"/>
+        <result property="sortOrder" column="sort_order"/>
+        <result property="createdAt" column="created_at" jdbcType="TIMESTAMP" typeHandler="com.zjb.mjgl.typehandler.LocalDateTimeTypeHandler"/>
+        <result property="updatedAt" column="updated_at" jdbcType="TIMESTAMP" typeHandler="com.zjb.mjgl.typehandler.LocalDateTimeTypeHandler"/>
+    </resultMap>
+
+    <insert id="insert">
+        INSERT INTO alert_rules (id, code, name, description, source, days, threshold, time_window_minutes, value_threshold, compare_op, metric_type, metric_field, trigger_mode, enabled, sort_order, created_at, updated_at)
+        VALUES (#{id}, #{code}, #{name}, #{description}, #{source}, #{days}, #{threshold}, #{timeWindowMinutes}, #{valueThreshold}, #{compareOp}, #{metricType}, #{metricField}, #{triggerMode}, #{enabled}, #{sortOrder}, #{createdAt}, #{updatedAt})
+    </insert>
+
+    <update id="updateById">
+        UPDATE alert_rules
+        <set>
+            <if test="code != null">code = #{code},</if>
+            <if test="name != null">name = #{name},</if>
+            <if test="description != null">description = #{description},</if>
+            <if test="source != null">source = #{source},</if>
+            <if test="days != null">days = #{days},</if>
+            <if test="threshold != null">threshold = #{threshold},</if>
+            <if test="timeWindowMinutes != null">time_window_minutes = #{timeWindowMinutes},</if>
+            <if test="valueThreshold != null">value_threshold = #{valueThreshold},</if>
+            <if test="compareOp != null">compare_op = #{compareOp},</if>
+            <if test="metricType != null">metric_type = #{metricType},</if>
+            <if test="metricField != null">metric_field = #{metricField},</if>
+            <if test="triggerMode != null">trigger_mode = #{triggerMode},</if>
+            <if test="enabled != null">enabled = #{enabled},</if>
+            <if test="sortOrder != null">sort_order = #{sortOrder},</if>
+            <if test="updatedAt != null">updated_at = #{updatedAt},</if>
+        </set>
+        WHERE id = #{id}
+    </update>
+
+    <select id="selectById" resultMap="BaseMap">
+        SELECT id, code, name, description, source, days, threshold, time_window_minutes, value_threshold, compare_op, metric_type, metric_field, trigger_mode, enabled, sort_order, created_at, updated_at
+        FROM alert_rules WHERE id = #{id}
+    </select>
+
+    <select id="selectByCode" resultMap="BaseMap">
+        SELECT id, code, name, description, source, days, threshold, time_window_minutes, value_threshold, compare_op, metric_type, metric_field, trigger_mode, enabled, sort_order, created_at, updated_at
+        FROM alert_rules WHERE code = #{code}
+    </select>
+
+    <select id="selectAll" resultMap="BaseMap">
+        SELECT id, code, name, description, source, days, threshold, time_window_minutes, value_threshold, compare_op, metric_type, metric_field, trigger_mode, enabled, sort_order, created_at, updated_at
+        FROM alert_rules ORDER BY sort_order ASC, created_at ASC
+    </select>
+
+    <select id="selectEnabledOrderBySortOrder" resultMap="BaseMap">
+        SELECT id, code, name, description, source, days, threshold, time_window_minutes, value_threshold, compare_op, metric_type, metric_field, trigger_mode, enabled, sort_order, created_at, updated_at
+        FROM alert_rules WHERE enabled = 1 ORDER BY sort_order ASC, created_at ASC
+    </select>
+
+    <delete id="deleteById">
+        DELETE FROM alert_rules WHERE id = #{id}
+    </delete>
+</mapper>

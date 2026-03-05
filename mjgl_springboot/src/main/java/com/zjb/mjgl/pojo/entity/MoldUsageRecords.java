@@ -54,6 +54,18 @@ public class MoldUsageRecords {
 
     private Date updatedAt;
 
+    @ApiModelProperty(value = "合理性审批状态：0=未审核,1=合理,2=存在问题")
+    private Integer usageApprovalStatus;
+
+    @ApiModelProperty(value = "合理性审批意见")
+    private String usageApprovalComment;
+
+    @ApiModelProperty(value = "合理性审批人ID")
+    private String usageApproverId;
+
+    @ApiModelProperty(value = "合理性审批时间")
+    private Date usageApprovalTime;
+
 
 }
 

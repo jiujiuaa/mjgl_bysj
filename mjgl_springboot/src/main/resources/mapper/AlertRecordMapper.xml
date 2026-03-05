@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zjb.mjgl.mapper.AlertRecordMapper">
+
+    <resultMap id="EntityMap" type="com.zjb.mjgl.pojo.entity.AlertRecord">
+        <id property="id" column="id"/>
+        <result property="moldId" column="mold_id"/>
+        <result property="alertType" column="alert_type"/>
+        <result property="triggerCondition" column="trigger_condition"/>
+        <result property="severity" column="severity"/>
+        <result property="message" column="message"/>
+        <result property="status" column="status"/>
+        <result property="resolvedBy" column="resolved_by"/>
+        <result property="resolvedAt" column="resolved_at" jdbcType="TIMESTAMP" typeHandler="com.zjb.mjgl.typehandler.LocalDateTimeTypeHandler"/>
+        <result property="createdAt" column="created_at" jdbcType="TIMESTAMP" typeHandler="com.zjb.mjgl.typehandler.LocalDateTimeTypeHandler"/>
+        <result property="updatedAt" column="updated_at" jdbcType="TIMESTAMP" typeHandler="com.zjb.mjgl.typehandler.LocalDateTimeTypeHandler"/>
+    </resultMap>
+
+    <resultMap id="VOMap" type="com.zjb.mjgl.pojo.vo.AlertRecordVO">
+        <id property="id" column="id"/>
+        <result property="moldId" column="mold_id"/>
+        <result property="moldCode" column="mold_code"/>
+        <result property="moldName" column="mold_name"/>
+        <result property="alertType" column="alert_type"/>
+        <result property="triggerCondition" column="trigger_condition"/>
+        <result property="severity" column="severity"/>
+        <result property="message" column="message"/>
+        <result property="status" column="status"/>
+        <result property="resolvedBy" column="resolved_by"/>
+        <result property="resolvedByName" column="resolved_by_name"/>
+        <result property="resolvedAt" column="resolved_at" typeHandler="com.zjb.mjgl.typehandler.LocalDateTimeTypeHandler"/>
+        <result property="createdAt" column="created_at" typeHandler="com.zjb.mjgl.typehandler.LocalDateTimeTypeHandler"/>
+        <result property="updatedAt" column="updated_at" typeHandler="com.zjb.mjgl.typehandler.LocalDateTimeTypeHandler"/>
+    </resultMap>
+
+    <insert id="insert">
+        INSERT INTO alerts (id, mold_id, alert_type, trigger_condition, severity, message, status,
+                            resolved_by, resolved_at, created_at, updated_at)
+        VALUES (#{id}, #{moldId}, #{alertType}, #{triggerCondition}, #{severity}, #{message}, #{status},
+                #{resolvedBy}, #{resolvedAt}, #{createdAt}, #{updatedAt})
+    </insert>
+
+    <update id="update">
+        UPDATE alerts
+        <set>
+            <if test="alertType != null">alert_type = #{alertType},</if>
+            <if test="triggerCondition != null">trigger_condition = #{triggerCondition},</if>
+            <if test="severity != null">severity = #{severity},</if>
+            <if test="message != null">message = #{message},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="resolvedBy != null">resolved_by = #{resolvedBy},</if>
+            <if test="resolvedAt != null">resolved_at = #{resolvedAt},</if>
+        </set>
+        WHERE id = #{id}
+    </update>
+
+    <select id="selectById" resultMap="EntityMap">
+        SELECT id, mold_id, alert_type, trigger_condition, severity, message, status,
+               resolved_by, resolved_at, created_at, updated_at
+        FROM alerts WHERE id = #{id}
+    </select>
+
+    <select id="selectVoById" resultMap="VOMap">
+        SELECT a.id, a.mold_id, m.mold_code, m.name AS mold_name,
+               a.alert_type, a.trigger_condition, a.severity, a.message, a.status,
+               a.resolved_by, ur.real_name AS resolved_by_name, a.resolved_at,
+               a.created_at, a.updated_at
+        FROM alerts a
+        LEFT JOIN molds m ON a.mold_id = m.id
+        LEFT JOIN users ur ON a.resolved_by = ur.id
+        WHERE a.id = #{id}
+    </select>
+
+    <select id="selectByMoldIdAndAlertTypeAndTriggerConditionAndStatus" resultMap="EntityMap">
+        SELECT id, mold_id, alert_type, trigger_condition, severity, message, status,
+               resolved_by, resolved_at, created_at, updated_at
+        FROM alerts
+        WHERE mold_id = #{moldId} AND alert_type = #{alertType}
+          AND (trigger_condition = #{triggerCondition} OR (trigger_condition IS NULL AND #{triggerCondition} IS NULL))
+          AND status = #{status}
+        ORDER BY created_at DESC
+    </select>
+
+    <select id="queryByCondition" resultMap="VOMap">
+        SELECT a.id, a.mold_id, m.mold_code, m.name AS mold_name,
+               a.alert_type, a.trigger_condition, a.severity, a.message, a.status,
+               a.resolved_by, ur.real_name AS resolved_by_name, a.resolved_at,
+               a.created_at, a.updated_at
+        FROM alerts a
+        LEFT JOIN molds m ON a.mold_id = m.id
+        LEFT JOIN users ur ON a.resolved_by = ur.id
+        <where>
+            <if test="moldId != null and moldId != ''">AND a.mold_id = #{moldId}</if>
+            <if test="status != null">AND a.status = #{status}</if>
+            <if test="alertType != null">AND a.alert_type = #{alertType}</if>
+            <if test="keyword != null and keyword != ''">
+                AND (m.mold_code LIKE CONCAT('%', #{keyword}, '%') OR m.name LIKE CONCAT('%', #{keyword}, '%'))
+            </if>
+        </where>
+        ORDER BY a.created_at DESC
+    </select>
+</mapper>

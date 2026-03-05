@@ -16,6 +16,5 @@ public class FileVO {
     private Long fileSize;
     private LocalDateTime uploadTime;
     private String description;
-
-
+    private String imageStatus;
 }

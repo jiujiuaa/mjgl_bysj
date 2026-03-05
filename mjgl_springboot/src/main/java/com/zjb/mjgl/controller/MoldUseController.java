@@ -1,7 +1,6 @@
 package com.zjb.mjgl.controller;
 
 import com.zjb.mjgl.common.Result;
-import com.zjb.mjgl.pojo.dto.MoldParam;
 import com.zjb.mjgl.pojo.dto.MoldUsageRecordDTO;
 import com.zjb.mjgl.service.UseRecordService;
 import lombok.extern.slf4j.Slf4j;
@@ -91,5 +90,19 @@ public class MoldUseController {
         }
         return useRecordService.updateUseRecord(moldUsageRecordDTO);
 
+    }
+
+    /**
+     * 使用记录合理性审批：1=合理,2=存在问题
+     */
+    @PostMapping("/record/{id}/approval")
+    public Result<?> approveUsage(@PathVariable String id, @RequestBody Map<String, Object> body) {
+        Object statusObj = body.get("status");
+        Integer status = null;
+        if (statusObj instanceof Number) {
+            status = ((Number) statusObj).intValue();
+        }
+        String comment = body.containsKey("comment") ? String.valueOf(body.get("comment")) : null;
+        return useRecordService.approveUsage(id, status, comment);
     }
 }

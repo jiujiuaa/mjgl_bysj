@@ -1,0 +1,189 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zjb.mjgl.mapper.MaintenanceReminderMapper">
+
+    <resultMap id="EntityMap" type="com.zjb.mjgl.pojo.entity.MaintenanceReminder">
+        <id property="id" column="id"/>
+        <result property="moldId" column="mold_id"/>
+        <result property="planId" column="plan_id"/>
+        <result property="planName" column="plan_name"/>
+        <result property="reminderType" column="reminder_type"/>
+        <result property="intervalValue" column="interval_value"/>
+        <result property="nextDueDate" column="next_due_date" jdbcType="DATE"/>
+        <result property="nextDueCycles" column="next_due_cycles"/>
+        <result property="reminderCount" column="reminder_count"/>
+        <result property="status" column="status"/>
+        <result property="sentAt" column="sent_at" jdbcType="TIMESTAMP"/>
+        <result property="operatorId" column="operator_id"/>
+        <result property="notes" column="notes"/>
+        <result property="createdAt" column="created_at" jdbcType="TIMESTAMP"/>
+        <result property="updatedAt" column="updated_at" jdbcType="TIMESTAMP"/>
+    </resultMap>
+
+    <resultMap id="VOMap" type="com.zjb.mjgl.pojo.vo.MaintenanceReminderVO">
+        <id property="id" column="id"/>
+        <result property="moldId" column="mold_id"/>
+        <result property="planId" column="plan_id"/>
+        <result property="moldCode" column="mold_code"/>
+        <result property="moldName" column="mold_name"/>
+        <result property="planName" column="plan_name"/>
+        <result property="reminderType" column="reminder_type"/>
+        <result property="intervalValue" column="interval_value"/>
+        <result property="nextDueDate" column="next_due_date"/>
+        <result property="nextDueCycles" column="next_due_cycles"/>
+        <result property="reminderCount" column="reminder_count"/>
+        <result property="status" column="status"/>
+        <result property="statusDesc" column="status_desc"/>
+        <result property="sentAt" column="sent_at"/>
+        <result property="operatorId" column="operator_id"/>
+        <result property="operatorName" column="operator_name"/>
+        <result property="notes" column="notes"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <insert id="insert">
+        INSERT INTO maintenance_reminders (
+            id, mold_id, plan_id, plan_name, reminder_type, interval_value,
+            next_due_date, next_due_cycles, reminder_count, status, sent_at, operator_id, notes,
+            created_at, updated_at
+        ) VALUES (
+            #{id}, #{moldId}, #{planId}, #{planName}, #{reminderType}, #{intervalValue},
+            #{nextDueDate}, #{nextDueCycles}, #{reminderCount}, #{status}, #{sentAt}, #{operatorId}, #{notes},
+            #{createdAt}, #{updatedAt}
+        )
+    </insert>
+
+    <update id="update">
+        UPDATE maintenance_reminders
+        <set>
+            <if test="moldId != null">mold_id = #{moldId},</if>
+            <if test="planId != null">plan_id = #{planId},</if>
+            <if test="planName != null">plan_name = #{planName},</if>
+            <if test="reminderType != null">reminder_type = #{reminderType},</if>
+            <if test="intervalValue != null">interval_value = #{intervalValue},</if>
+            <if test="nextDueDate != null">next_due_date = #{nextDueDate},</if>
+            <if test="nextDueCycles != null">next_due_cycles = #{nextDueCycles},</if>
+            <if test="reminderCount != null">reminder_count = #{reminderCount},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="sentAt != null">sent_at = #{sentAt},</if>
+            <if test="operatorId != null">operator_id = #{operatorId},</if>
+            <if test="notes != null">notes = #{notes},</if>
+            <if test="updatedAt != null">updated_at = #{updatedAt},</if>
+        </set>
+        WHERE id = #{id}
+    </update>
+
+    <select id="selectById" resultMap="EntityMap">
+        SELECT id, mold_id, plan_id, plan_name, reminder_type, interval_value,
+               next_due_date, next_due_cycles, reminder_count, status, sent_at, operator_id, notes,
+               created_at, updated_at
+        FROM maintenance_reminders
+        WHERE id = #{id}
+    </select>
+
+    <delete id="deleteById">
+        DELETE FROM maintenance_reminders WHERE id = #{id}
+    </delete>
+
+    <select id="queryByCondition" resultMap="VOMap">
+        SELECT
+            r.id,
+            r.mold_id,
+            r.plan_id,
+            m.mold_code,
+            m.name AS mold_name,
+            r.plan_name,
+            r.reminder_type,
+            r.interval_value,
+            r.next_due_date,
+            r.next_due_cycles,
+            r.reminder_count,
+            r.status,
+            CASE r.status
+                WHEN 1 THEN '待处理'
+                WHEN 2 THEN '已提醒'
+                WHEN 3 THEN '已完成'
+                WHEN 4 THEN '已忽略'
+                ELSE ''
+            END AS status_desc,
+            r.sent_at,
+            r.operator_id,
+            u.real_name AS operator_name,
+            r.notes,
+            r.created_at,
+            r.updated_at
+        FROM maintenance_reminders r
+        LEFT JOIN molds m ON r.mold_id = m.id
+        LEFT JOIN users u ON r.operator_id = u.id
+        <where>
+            <if test="moldId != null and moldId != ''">
+                AND r.mold_id = #{moldId}
+            </if>
+            <if test="keyword != null and keyword != ''">
+                AND (m.mold_code LIKE CONCAT('%', #{keyword}, '%') OR m.name LIKE CONCAT('%', #{keyword}, '%'))
+            </if>
+            <if test="status != null">
+                AND r.status = #{status}
+            </if>
+            <if test="reminderType != null">
+                AND r.reminder_type = #{reminderType}
+            </if>
+        </where>
+        ORDER BY r.created_at DESC
+    </select>
+
+    <select id="listByMoldId" resultMap="VOMap">
+        SELECT
+            r.id,
+            r.mold_id,
+            r.plan_id,
+            m.mold_code,
+            m.name AS mold_name,
+            r.plan_name,
+            r.reminder_type,
+            r.interval_value,
+            r.next_due_date,
+            r.next_due_cycles,
+            r.reminder_count,
+            r.status,
+            CASE r.status
+                WHEN 1 THEN '待处理'
+                WHEN 2 THEN '已提醒'
+                WHEN 3 THEN '已完成'
+                WHEN 4 THEN '已忽略'
+                ELSE ''
+            END AS status_desc,
+            r.sent_at,
+            r.operator_id,
+            u.real_name AS operator_name,
+            r.notes,
+            r.created_at,
+            r.updated_at
+        FROM maintenance_reminders r
+        LEFT JOIN molds m ON r.mold_id = m.id
+        LEFT JOIN users u ON r.operator_id = u.id
+        WHERE r.mold_id = #{moldId}
+        ORDER BY r.created_at DESC
+    </select>
+
+    <select id="listAll" resultMap="EntityMap">
+        SELECT
+            id,
+            mold_id,
+            plan_id,
+            plan_name,
+            reminder_type,
+            interval_value,
+            next_due_date,
+            next_due_cycles,
+            reminder_count,
+            status,
+            sent_at,
+            operator_id,
+            notes,
+            created_at,
+            updated_at
+        FROM maintenance_reminders
+    </select>
+</mapper>

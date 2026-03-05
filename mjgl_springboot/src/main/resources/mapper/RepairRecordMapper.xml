@@ -1,0 +1,279 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.zjb.mjgl.mapper.RepairRecordMapper">
+
+    <!-- 新增模具维修记录：直接使用 DTO 字段 -->
+    <insert id="insert" parameterType="com.zjb.mjgl.pojo.dto.RepairRecordDTO">
+        INSERT INTO repair_records (
+            id,
+            mold_id,
+            reporter_id,
+            maintainer_id,
+            verifier_id,
+            repair_reason,
+            repair_description,
+            start_time,
+            end_time,
+            status,
+            cost,
+            notes,
+            repair_approval_status,
+            repair_approval_comment,
+            repair_approver_id,
+            repair_approval_time
+        )
+        VALUES (
+            #{id},
+            #{moldId},
+            #{reporterId},
+            #{maintainerId},
+            #{verifierId},
+            #{repairReason},
+            #{repairDescription},
+            #{startTime},
+            #{endTime},
+            #{status},
+            #{cost},
+            #{notes},
+            #{repairApprovalStatus},
+            #{repairApprovalComment},
+            #{repairApproverId},
+            #{repairApprovalTime}
+        )
+    </insert>
+
+    <!-- 更新模具维修记录：按ID更新，忽略为null的字段 -->
+    <update id="update" parameterType="com.zjb.mjgl.pojo.dto.RepairRecordDTO">
+        UPDATE repair_records
+        <set>
+            <if test="moldId != null">mold_id = #{moldId},</if>
+            <if test="reporterId != null">reporter_id = #{reporterId},</if>
+            <if test="maintainerId != null">maintainer_id = #{maintainerId},</if>
+            <if test="verifierId != null">verifier_id = #{verifierId},</if>
+            <if test="repairReason != null">repair_reason = #{repairReason},</if>
+            <if test="repairDescription != null">repair_description = #{repairDescription},</if>
+            <if test="startTime != null">start_time = #{startTime},</if>
+            <if test="endTime != null">end_time = #{endTime},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="cost != null">cost = #{cost},</if>
+            <if test="notes != null">notes = #{notes},</if>
+            <if test="repairApprovalStatus != null">repair_approval_status = #{repairApprovalStatus},</if>
+            <if test="repairApprovalComment != null">repair_approval_comment = #{repairApprovalComment},</if>
+            <if test="repairApproverId != null">repair_approver_id = #{repairApproverId},</if>
+            <if test="repairApprovalTime != null">repair_approval_time = #{repairApprovalTime},</if>
+        </set>
+        WHERE id = #{id}
+    </update>
+    <delete id="deleteById">
+        delete from repair_records where id= #{id}
+    </delete>
+
+    <select id="selectById" parameterType="java.lang.String"
+            resultType="com.zjb.mjgl.pojo.dto.RepairRecordDTO">
+        SELECT
+            id,
+            mold_id          AS moldId,
+            reporter_id      AS reporterId,
+            maintainer_id    AS maintainerId,
+            verifier_id      AS verifierId,
+            repair_reason    AS repairReason,
+            repair_description AS repairDescription,
+            start_time       AS startTime,
+            end_time         AS endTime,
+            status,
+            cost,
+            notes,
+            repair_approval_status AS repairApprovalStatus,
+            repair_approval_comment AS repairApprovalComment,
+            repair_approver_id AS repairApproverId,
+            repair_approval_time AS repairApprovalTime
+        FROM repair_records
+        WHERE id = #{id}
+    </select>
+
+    <!-- 维修记录列表 VO 映射 -->
+    <resultMap id="repairRecordVoMap" type="com.zjb.mjgl.pojo.vo.RepairRecordVO">
+        <id column="id" property="id"/>
+        <result column="mold_id" property="moldId"/>
+        <result column="mold_code" property="moldCode"/>
+        <result column="mold_name" property="moldName"/>
+        <result column="mold_category" property="moldCategory"/>
+
+        <result column="reporter_id" property="reporterId"/>
+        <result column="reporter_name" property="reporterName"/>
+        <result column="maintainer_id" property="maintainerId"/>
+        <result column="maintainer_name" property="maintainerName"/>
+        <result column="verifier_id" property="verifierId"/>
+        <result column="verifier_name" property="verifierName"/>
+
+        <result column="repair_reason" property="repairReason"/>
+        <result column="repair_description" property="repairDescription"/>
+
+        <result column="start_time" property="startTime"
+                typeHandler="com.zjb.mjgl.typehandler.LocalDateTimeTypeHandler"/>
+        <result column="end_time" property="endTime"
+                typeHandler="com.zjb.mjgl.typehandler.LocalDateTimeTypeHandler"/>
+
+        <result column="status" property="status"/>
+        <result column="cost" property="cost"/>
+        <result column="notes" property="notes"/>
+
+        <result column="repair_approval_status" property="repairApprovalStatus"/>
+        <result column="repair_approval_comment" property="repairApprovalComment"/>
+        <result column="repair_approver_id" property="repairApproverId"/>
+        <result column="repair_approval_time" property="repairApprovalTime"
+                typeHandler="com.zjb.mjgl.typehandler.LocalDateTimeTypeHandler"/>
+
+        <result column="created_at" property="createdAt"
+                typeHandler="com.zjb.mjgl.typehandler.LocalDateTimeTypeHandler"/>
+    </resultMap>
+
+    <!-- 查询所有维修记录，按创建时间倒序 -->
+    <select id="getAll" resultMap="repairRecordVoMap">
+        SELECT
+            r.id,
+            r.mold_id,
+            m.mold_code,
+            m.name       AS mold_name,
+            m.category   AS mold_category,
+            r.reporter_id,
+            ur.real_name AS reporter_name,
+            r.maintainer_id,
+            um.real_name AS maintainer_name,
+            r.verifier_id,
+            uv.real_name AS verifier_name,
+            r.repair_reason,
+            r.repair_description,
+            r.start_time,
+            r.end_time,
+            r.status,
+            r.cost,
+            r.notes,
+            r.repair_approval_status,
+            r.repair_approval_comment,
+            r.repair_approver_id,
+            r.repair_approval_time,
+            r.created_at
+        FROM repair_records r
+                 LEFT JOIN molds m ON r.mold_id = m.id
+                 LEFT JOIN users ur ON r.reporter_id = ur.id
+                 LEFT JOIN users um ON r.maintainer_id = um.id
+                 LEFT JOIN users uv ON r.verifier_id = uv.id
+        ORDER BY r.created_at DESC
+    </select>
+    <select id="selectDetailByCondition" resultMap="repairRecordVoMap">
+        SELECT
+            r.id,
+            r.mold_id,
+            m.mold_code,
+            m.name       AS mold_name,
+            m.category   AS mold_category,
+            r.reporter_id,
+            ur.real_name AS reporter_name,
+            r.maintainer_id,
+            um.real_name AS maintainer_name,
+            r.verifier_id,
+            uv.real_name AS verifier_name,
+            r.repair_reason,
+            r.repair_description,
+            r.start_time,
+            r.end_time,
+            r.status,
+            r.cost,
+            r.notes,
+            r.repair_approval_status,
+            r.repair_approval_comment,
+            r.repair_approver_id,
+            r.repair_approval_time,
+            r.created_at
+        FROM repair_records r
+                 LEFT JOIN molds m ON r.mold_id = m.id
+                 LEFT JOIN users ur ON r.reporter_id = ur.id
+                 LEFT JOIN users um ON r.maintainer_id = um.id
+                 LEFT JOIN users uv ON r.verifier_id = uv.id
+        <where>
+            <if test="moldId != null and moldId != ''">
+                AND r.mold_id = #{moldId}
+            </if>
+            <if test="keyword != null and keyword != ''">
+                AND (m.mold_code LIKE CONCAT('%', #{keyword}, '%') OR m.name LIKE CONCAT('%', #{keyword}, '%'))
+            </if>
+            <if test="reporterId != null and reporterId != ''">
+                AND r.reporter_id = #{reporterId}
+            </if>
+            <if test="maintainerId != null and maintainerId != ''">
+                AND r.maintainer_id = #{maintainerId}
+            </if>
+            <if test="verifierId != null and verifierId != ''">
+                AND r.verifier_id = #{verifierId}
+            </if>
+            <if test="startTime != null">
+                AND r.start_time &gt;= #{startTime}
+            </if>
+            <if test="endTime != null">
+                AND r.end_time &lt;= #{endTime}
+            </if>
+            <if test="status != null">
+                AND r.status = #{status}
+            </if>
+        </where>
+        ORDER BY r.created_at DESC
+    </select>
+    <!-- 根据模具ID查询该模具的维修记录列表（与 Mapper 方法 getrecordByMoldId 对应） -->
+    <select id="getrecordByMoldId" resultMap="repairRecordVoMap">
+        SELECT
+            r.id,
+            r.mold_id,
+            m.mold_code,
+            m.name       AS mold_name,
+            m.category   AS mold_category,
+            r.reporter_id,
+            ur.real_name AS reporter_name,
+            r.maintainer_id,
+            um.real_name AS maintainer_name,
+            r.verifier_id,
+            uv.real_name AS verifier_name,
+            r.repair_reason,
+            r.repair_description,
+            r.start_time,
+            r.end_time,
+            r.status,
+            r.cost,
+            r.notes,
+            r.repair_approval_status,
+            r.repair_approval_comment,
+            r.repair_approver_id,
+            r.repair_approval_time,
+            r.created_at
+        FROM repair_records r
+                 LEFT JOIN molds m ON r.mold_id = m.id
+                 LEFT JOIN users ur ON r.reporter_id = ur.id
+                 LEFT JOIN users um ON r.maintainer_id = um.id
+                 LEFT JOIN users uv ON r.verifier_id = uv.id
+        WHERE r.mold_id = #{moldId}
+        ORDER BY r.created_at DESC
+    </select>
+
+    <!-- 更新维修记录合理性审批 -->
+    <update id="updateRepairApproval">
+        UPDATE repair_records
+        SET repair_approval_status  = #{status},
+            repair_approval_comment = #{comment},
+            repair_approver_id      = #{approverId},
+            repair_approval_time    = #{approveTime}
+        WHERE id = #{id}
+    </update>
+
+    <select id="countByMoldIdSince" resultType="int">
+        SELECT COUNT(1) FROM repair_records
+        WHERE mold_id = #{moldId} AND start_time &gt;= #{since}
+    </select>
+
+    <select id="listMoldIdsWithRepairCountGeSince" resultType="java.lang.String">
+        SELECT mold_id FROM repair_records
+        WHERE start_time &gt;= #{since}
+        GROUP BY mold_id
+        HAVING COUNT(1) &gt;= #{threshold}
+    </select>
+</mapper>
+

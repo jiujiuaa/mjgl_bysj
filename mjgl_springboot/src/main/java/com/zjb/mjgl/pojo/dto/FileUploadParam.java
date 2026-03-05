@@ -35,4 +35,7 @@ public class FileUploadParam {
 
     @ApiModelProperty(value = "文件说明", example = "模具正面照")
     private String description;
+
+    @ApiModelProperty(value = "图片所属业务状态：如 REPORT/FINISH 等")
+    private String imageStatus;
 }

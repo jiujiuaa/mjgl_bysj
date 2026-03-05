@@ -1,0 +1,214 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.zjb.mjgl.mapper.MaintenanceLogMapper">
+
+        <!--新增所有列-->
+        <insert id="insert" keyProperty="id" useGeneratedKeys="true">
+            insert into maintenance_logs(id,mold_id, plan_id, maintainer_id, maintenance_type, details, actual_start_time,
+                                         actual_end_time, cost, file_ids, created_at,
+                                         approval_status, approval_comment, approver_id, approval_time)
+            values (#{id},#{moldId}, #{planId}, #{maintainerId}, #{maintenanceType}, #{details}, #{actualStartTime},
+                    #{actualEndTime}, #{cost}, #{fileIds}, #{createdAt},
+                    #{approvalStatus}, #{approvalComment}, #{approverId}, #{approvalTime})
+    </insert>
+    <update id="update">
+
+            update maintenance_logs
+            <set>
+                <if test="moldId != null and moldId != ''">
+                    mold_id = #{moldId},
+                </if>
+                <if test="planId != null and planId != ''">
+                    plan_id = #{planId},
+                </if>
+                <if test="maintainerId != null and maintainerId != ''">
+                    maintainer_id = #{maintainerId},
+                </if>
+                <if test="maintenanceType != null and maintenanceType != ''">
+                    maintenance_type = #{maintenanceType},
+                </if>
+                <if test="details != null and details != ''">
+                    details = #{details},
+                </if>
+                <if test="actualStartTime != null">
+                    actual_start_time = #{actualStartTime},
+                </if>
+                <if test="actualEndTime != null">
+                    actual_end_time = #{actualEndTime},
+                </if>
+                <if test="cost != null">
+                    cost = #{cost},
+                </if>
+                <if test="fileIds != null and fileIds != ''">
+                    file_ids = #{fileIds},
+                </if>
+                <if test="createdAt != null">
+                    created_at = #{createdAt},
+                </if>
+                <if test="approvalStatus != null">
+                    approval_status = #{approvalStatus},
+                </if>
+                <if test="approvalComment != null">
+                    approval_comment = #{approvalComment},
+                </if>
+                <if test="approverId != null">
+                    approver_id = #{approverId},
+                </if>
+                <if test="approvalTime != null">
+                    approval_time = #{approvalTime},
+                </if>
+            </set>
+            where id = #{id}
+        </update>
+
+
+    <delete id="deleteById">
+        delete
+        from maintenance_logs
+        where id = #{id}
+    </delete>
+    <resultMap type="com.zjb.mjgl.pojo.entity.MaintenanceLogs" id="MaintenanceLogsMap">
+        <result property="id" column="id" jdbcType="VARCHAR"/>
+        <result property="moldId" column="mold_id" jdbcType="VARCHAR"/>
+        <result property="planId" column="plan_id" jdbcType="VARCHAR"/>
+        <result property="maintainerId" column="maintainer_id" jdbcType="VARCHAR"/>
+        <result property="maintenanceType" column="maintenance_type" jdbcType="VARCHAR"/>
+        <result property="details" column="details" jdbcType="VARCHAR"/>
+        <result property="actualStartTime" column="actual_start_time" jdbcType="TIMESTAMP"/>
+        <result property="actualEndTime" column="actual_end_time" jdbcType="TIMESTAMP"/>
+        <result property="cost" column="cost" jdbcType="NUMERIC"/>
+        <result property="fileIds" column="file_ids" jdbcType="VARCHAR"/>
+        <result property="createdAt" column="created_at" jdbcType="TIMESTAMP"/>
+        <result property="approvalStatus" column="approval_status" jdbcType="INTEGER"/>
+        <result property="approvalComment" column="approval_comment" jdbcType="VARCHAR"/>
+        <result property="approverId" column="approver_id" jdbcType="VARCHAR"/>
+        <result property="approvalTime" column="approval_time" jdbcType="TIMESTAMP"/>
+    </resultMap>
+
+    <!-- 保养记录列表 VO：带模具、计划、保养人名称 -->
+    <resultMap type="com.zjb.mjgl.pojo.vo.MaintenanceLogVO" id="MaintenanceLogVOMap">
+        <id property="id" column="id"/>
+        <result property="moldId" column="mold_id"/>
+        <result property="moldCode" column="mold_code"/>
+        <result property="moldName" column="mold_name"/>
+        <result property="planId" column="plan_id"/>
+        <result property="planName" column="plan_name"/>
+        <result property="maintenanceType" column="maintenance_type"/>
+        <result property="maintainerId" column="maintainer_id"/>
+        <result property="maintainerName" column="maintainer_name"/>
+        <result property="details" column="details"/>
+        <result property="actualStartTime" column="actual_start_time"/>
+        <result property="actualEndTime" column="actual_end_time"/>
+        <result property="cost" column="cost"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="approvalStatus" column="approval_status"/>
+        <result property="approvalComment" column="approval_comment"/>
+        <result property="approverId" column="approver_id"/>
+        <result property="approvalTime" column="approval_time"/>
+    </resultMap>
+    <select id="getByMoldId" resultMap="MaintenanceLogsMap">
+        select id,
+               mold_id,
+               plan_id,
+               maintainer_id,
+               maintenance_type,
+               details,
+               actual_start_time,
+               actual_end_time,
+               cost,
+               file_ids,
+               created_at,
+               approval_status,
+               approval_comment,
+               approver_id,
+               approval_time
+        from maintenance_logs
+        where mold_id=#{id}
+    </select>
+    <select id="getByPlanId" resultMap="MaintenanceLogsMap">
+        select id,
+               mold_id,
+               plan_id,
+               maintainer_id,
+               maintenance_type,
+               details,
+               actual_start_time,
+               actual_end_time,
+               cost,
+               file_ids,
+               created_at,
+               approval_status,
+               approval_comment,
+               approver_id,
+               approval_time
+        from maintenance_logs
+        where plan_id= #{id}
+
+    </select>
+
+    <!-- 条件查询：配合 PageHelper 分页，返回带名称的 VO -->
+    <select id="queryByCondition" resultMap="MaintenanceLogVOMap">
+        select
+            l.id,
+            l.mold_id,
+            m.mold_code,
+            m.name              as mold_name,
+            l.plan_id,
+            p.name              as plan_name,
+            l.maintenance_type,
+            l.maintainer_id,
+            u.real_name         as maintainer_name,
+            l.details,
+            l.actual_start_time,
+            l.actual_end_time,
+            l.cost,
+            l.created_at,
+            l.approval_status,
+            l.approval_comment,
+            l.approver_id,
+            l.approval_time
+        from maintenance_logs l
+                 left join maintenance_plans p on l.plan_id = p.id
+                 left join molds m on l.mold_id = m.id
+                 left join users u on l.maintainer_id = u.id
+        <where>
+            <!-- 计划名称 / 描述关键字模糊（基于保养计划） -->
+            <if test="keyword != null and keyword != ''">
+                and (
+                        p.name like concat('%', #{keyword}, '%')
+                        or p.description like concat('%', #{keyword}, '%')
+                    )
+            </if>
+            <!-- 指定模具（名称/编号模糊），基于计划关联的模具 -->
+            <if test="specificMoldId != null and specificMoldId != ''">
+                and (
+                        m.name like concat('%', #{specificMoldId}, '%')
+                        or m.mold_code like concat('%', #{specificMoldId}, '%')
+                    )
+            </if>
+            <!-- 仍保留日志自身的保养类型 / 保养人 / 时间条件 -->
+            <if test="maintenanceType != null and maintenanceType != ''">
+                and l.maintenance_type = #{maintenanceType}
+            </if>
+            <if test="maintainerId != null and maintainerId != ''">
+                and l.maintainer_id = #{maintainerId}
+            </if>
+            <if test="startActualTime != null">
+                and l.actual_start_time &gt;= #{startActualTime}
+            </if>
+            <if test="endActualTime != null">
+                and l.actual_end_time &lt;= #{endActualTime}
+            </if>
+        </where>
+        order by l.created_at desc
+    </select>
+
+    <update id="updateApproval">
+        UPDATE maintenance_logs
+        SET approval_status  = #{status},
+            approval_comment = #{comment},
+            approver_id      = #{approverId},
+            approval_time    = #{approvalTime}
+        WHERE id = #{id}
+    </update>
+</mapper>

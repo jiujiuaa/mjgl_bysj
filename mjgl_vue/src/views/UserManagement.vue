@@ -1,47 +1,10 @@
 <template>
   <div class="user-management-container">
-    <!-- 左侧边栏 -->
-    <aside class="sidebar">
-      <div class="sidebar-header">
-        <div class="sidebar-logo">管理系统</div>
-      </div>
-      <nav class="sidebar-menu">
-        <!-- 普通员工不显示“用户管理”菜单，其它业务模块照常显示 -->
-        <div
-          v-if="authStore.isAdmin"
-          class="menu-item active"
-        >
-          <span class="menu-icon">👤</span>
-          <span>用户管理</span>
-        </div>
-        <div
-          class="menu-item"
-          @click="router.push('/mold-management')"
-        >
-          <span class="menu-icon">🧱</span>
-          <span>模具管理</span>
-        </div>
-        <div class="menu-item disabled">
-          <span class="menu-icon">🛠</span>
-          <span>运维管理</span>
-        </div>
-        <div class="menu-item disabled">
-          <span class="menu-icon">📈</span>
-          <span>监测与异常</span>
-        </div>
-        <div class="menu-item disabled">
-          <span class="menu-icon">❤️</span>
-          <span>健康评估</span>
-        </div>
-      </nav>
-      <div class="sidebar-footer">
-        <span class="sidebar-username">{{ authStore.username }}</span>
-        <button class="sidebar-logout" @click="handleLogout">退出登录</button>
-      </div>
-    </aside>
+    <!-- 全局左侧边栏 -->
+    <AppSidebar />
 
     <!-- 右侧主区域 -->
-    <div class="layout-main">
+    <div class="layout-main" v-back-to-top>
       <!-- 顶部条 -->
       <header class="top-header">
         <div class="top-title">用户管理</div>
@@ -409,6 +372,7 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import AppSidebar from '@/components/AppSidebar.vue'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -478,12 +442,39 @@ onMounted(async () => {
     return
   }
   // 普通员工不加载用户列表，直接返回
-  if (!authStore.isAdmin) {
-    return
+  if (authStore.isAdmin) {
+    // 加载用户列表
+    await handleLoadAllUsers()
   }
-  // 加载用户列表
-  await handleLoadAllUsers()
 })
+
+const goUserManagement = () => {
+  router.push('/user-management')
+}
+
+const goMoldManagement = () => {
+  router.push('/mold-management')
+}
+
+const goUseRecords = () => {
+  router.push('/mold-use-records')
+}
+
+const goRepairRecords = () => {
+  router.push('/repair-records')
+}
+
+const goMaintenancePlans = () => {
+  router.push('/maintenance-plans')
+}
+
+const goMaintenanceLogs = () => {
+  router.push('/maintenance-logs')
+}
+
+const goMaintenanceReminders = () => {
+  router.push('/maintenance-reminders')
+}
 
 // 加载所有用户
 const handleLoadAllUsers = async () => {
@@ -842,88 +833,7 @@ const formatDate = (dateStr) => {
 }
 
 /* 左侧边栏 */
-.sidebar {
-  width: 220px;
-  background: #1e3c72;
-  color: #e5e7eb;
-  display: flex;
-  flex-direction: column;
-  padding: 16px 12px;
-}
-
-.sidebar-header {
-  padding: 12px 8px 20px;
-}
-
-.sidebar-logo {
-  font-size: 18px;
-  font-weight: 600;
-  letter-spacing: 1px;
-}
-
-.sidebar-menu {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.menu-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 12px;
-  border-radius: 6px;
-  cursor: pointer;
-  color: #e5e7eb;
-  font-size: 14px;
-  transition: background 0.2s, color 0.2s;
-}
-
-.menu-item .menu-icon {
-  width: 18px;
-  text-align: center;
-}
-
-.menu-item.active {
-  background: #2563eb;
-}
-
-.menu-item:not(.active):hover {
-  background: rgba(148, 163, 184, 0.25);
-}
-
-.menu-item.disabled {
-  opacity: 0.6;
-  cursor: default;
-}
-
-.sidebar-footer {
-  padding-top: 12px;
-  border-top: 1px solid rgba(148, 163, 184, 0.4);
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.sidebar-username {
-  font-size: 13px;
-}
-
-.sidebar-logout {
-  padding: 6px 10px;
-  background: transparent;
-  color: #e5e7eb;
-  border-radius: 4px;
-  border: 1px solid rgba(148, 163, 184, 0.8);
-  font-size: 13px;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.sidebar-logout:hover {
-  background: rgba(148, 163, 184, 0.3);
-}
+/* 侧边栏样式由全局组件 AppSidebar 负责 */
 
 /* 右侧主区域 */
 .layout-main {

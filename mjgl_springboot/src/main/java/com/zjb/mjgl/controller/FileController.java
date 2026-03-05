@@ -6,6 +6,7 @@ import com.zjb.mjgl.pojo.vo.FileVO;
 import com.zjb.mjgl.service.FilesService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -18,6 +19,7 @@ import java.util.List;
 @Api(tags = "文件管理")
 @RestController
 @RequestMapping("/api/files")
+@Slf4j
 public class FileController {
 
 
@@ -33,7 +35,9 @@ public class FileController {
     @ApiOperation("上传文件（支持多选）")
     @PostMapping("/upload")
     public Result<List<FileVO>> upload(@Valid @ModelAttribute FileUploadParam param) {
-
+        log.info("收到文件上传请求, bizType={}, bizId={}, fileType={}, 文件数量={}",
+                param.getBizType(), param.getBizId(), param.getFileType(),
+                param.getFiles() != null ? param.getFiles().size() : 0);
         return  Result.success(filesService.upload(param));
     }
 
@@ -46,7 +50,7 @@ public class FileController {
     @ApiOperation("删除文件")
     @DeleteMapping("/delete")
     public Result<Void> delete(@RequestBody List<String> fileIds) {
-
+        log.info("收到删除文件请求, 数量={}", fileIds != null ? fileIds.size() : 0);
         filesService.delete(fileIds);
         return Result.success();
     }
@@ -57,7 +61,19 @@ public class FileController {
     @ApiOperation("获取文件预览URL")
     @GetMapping("/preview/{id}")
     public Result<String> preview(@PathVariable String id) {
+        log.info("收到获取文件预览URL请求, id={}", id);
         String url = filesService.generatePreviewUrl(id);
         return Result.success(url);
+    }
+
+    /**
+     * 通用：根据业务类型 + 业务ID（可选文件类型）查询文件列表
+     */
+    @ApiOperation("根据业务类型和业务ID查询文件列表")
+    @GetMapping("/biz")
+    public Result<List<FileVO>> listByBiz(@RequestParam String bizType,
+                                          @RequestParam String bizId,
+                                          @RequestParam(required = false) String fileType) {
+        return Result.success(filesService.listByBiz(bizType, bizId, fileType));
     }
 }

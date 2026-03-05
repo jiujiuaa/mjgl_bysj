@@ -20,6 +20,10 @@
             status,
             return_inspection_passed,
             return_remarks,
+            usage_approval_status,
+            usage_approval_comment,
+            usage_approver_id,
+            usage_approval_time,
             created_at,
             updated_at
         )
@@ -43,6 +47,10 @@
                 ELSE 0
             END,
             #{returnRemarks},
+            0,
+            NULL,
+            NULL,
+            NULL,
             NOW(),
             NOW()
         )
@@ -100,6 +108,10 @@
             status,
             return_inspection_passed AS returnInspectionPassed,
             return_remarks     AS returnRemarks,
+            usage_approval_status   AS usageApprovalStatus,
+            usage_approval_comment  AS usageApprovalComment,
+            usage_approver_id       AS usageApproverId,
+            usage_approval_time     AS usageApprovalTime,
             created_at         AS createdAt,
             updated_at         AS updatedAt
         FROM mold_usage_records
@@ -143,6 +155,8 @@
                 typeHandler="com.zjb.mjgl.typehandler.LocalDateTimeTypeHandler"/>
         <result column="updated_at" property="updatedAt"
                 typeHandler="com.zjb.mjgl.typehandler.LocalDateTimeTypeHandler"/>
+        <result column="usage_approval_status" property="usageApprovalStatus"/>
+        <result column="usage_approval_comment" property="usageApprovalComment"/>
     </resultMap>
     <sql id="moldUseRecord">
         SELECT
@@ -173,6 +187,8 @@
             r.status,
             r.return_inspection_passed,
             r.return_remarks,
+            r.usage_approval_status,
+            r.usage_approval_comment,
             r.created_at,
             r.updated_at
     </sql>
@@ -211,4 +227,15 @@
         LEFT JOIN molds m ON r.mold_id = m.id
         ORDER BY r.created_at DESC
     </select>
+
+    <!-- 更新合理性审批 -->
+    <update id="updateUsageApproval">
+        UPDATE mold_usage_records
+        SET usage_approval_status  = #{status},
+            usage_approval_comment = #{comment},
+            usage_approver_id      = #{approverId},
+            usage_approval_time    = #{approveTime},
+            updated_at             = NOW()
+        WHERE id = #{id}
+    </update>
 </mapper>

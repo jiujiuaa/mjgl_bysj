@@ -40,4 +40,10 @@ public class MoldUsageRecordVO {
 
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+
+    /**
+     * 合理性审批：0=未审核,1=合理,2=存在问题
+     */
+    private Integer usageApprovalStatus;
+    private String usageApprovalComment;
 }

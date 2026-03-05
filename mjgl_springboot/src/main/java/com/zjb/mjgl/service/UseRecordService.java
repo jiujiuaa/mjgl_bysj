@@ -35,4 +35,9 @@ public interface UseRecordService {
     Result<?> deleteRecord(String id);
 
     Result<?> updateUseRecord(MoldUsageRecordDTO moldUsageRecordDTO);
+
+    /**
+     * 合理性审批：1=合理,2=存在问题
+     */
+    Result<?> approveUsage(String id, Integer approvalStatus, String comment);
 }

@@ -1,0 +1,193 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.zjb.mjgl.mapper.MoldAbnormalRecordMapper">
+
+    <resultMap id="EntityMap" type="com.zjb.mjgl.pojo.entity.MoldAbnormalRecord">
+        <id property="id" column="id"/>
+        <result property="moldId" column="mold_id"/>
+        <result property="abnormalType" column="abnormal_type"/>
+        <result property="measuredValue" column="measured_value"/>
+        <result property="thresholdValue" column="threshold_value"/>
+        <result property="description" column="description"/>
+        <result property="occurredAt" column="occurred_at" jdbcType="TIMESTAMP"/>
+        <result property="sourceType" column="source_type"/>
+        <result property="operatorId" column="operator_id"/>
+        <result property="deviceId" column="device_id"/>
+        <result property="linkedRepairId" column="linked_repair_id"/>
+        <result property="linkedLogId" column="linked_log_id"/>
+        <result property="createdAt" column="created_at" jdbcType="TIMESTAMP"/>
+        <result property="updatedAt" column="updated_at" jdbcType="TIMESTAMP"/>
+    </resultMap>
+
+    <resultMap id="VOMap" type="com.zjb.mjgl.pojo.vo.MoldAbnormalRecordVO">
+        <id property="id" column="id"/>
+        <result property="moldId" column="mold_id"/>
+        <result property="moldCode" column="mold_code"/>
+        <result property="moldName" column="mold_name"/>
+        <result property="abnormalType" column="abnormal_type"/>
+        <result property="measuredValue" column="measured_value"/>
+        <result property="thresholdValue" column="threshold_value"/>
+        <result property="description" column="description"/>
+        <result property="occurredAt" column="occurred_at"/>
+        <result property="sourceType" column="source_type"/>
+        <result property="operatorId" column="operator_id"/>
+        <result property="operatorName" column="operator_name"/>
+        <result property="createdAt" column="created_at"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="com.zjb.mjgl.pojo.entity.MoldAbnormalRecord">
+        INSERT INTO abnormal_records
+        (id,
+         mold_id,
+         abnormal_type,
+         measured_value,
+         threshold_value,
+         description,
+         occurred_at,
+         source_type,
+         operator_id,
+         device_id,
+         linked_repair_id,
+         linked_log_id,
+         created_at,
+         updated_at)
+        VALUES
+        (#{id},
+         #{moldId},
+         #{abnormalType},
+         #{measuredValue},
+         #{thresholdValue},
+         #{description},
+         #{occurredAt},
+         #{sourceType},
+         #{operatorId},
+         #{deviceId},
+         #{linkedRepairId},
+         #{linkedLogId},
+         NOW(),
+         NOW())
+    </insert>
+
+    <update id="update">
+        UPDATE abnormal_records
+        <set>
+            <if test="moldId != null">mold_id = #{moldId},</if>
+            <if test="abnormalType != null">abnormal_type = #{abnormalType},</if>
+            <if test="measuredValue != null">measured_value = #{measuredValue},</if>
+            <if test="thresholdValue != null">threshold_value = #{thresholdValue},</if>
+            <if test="description != null">description = #{description},</if>
+            <if test="occurredAt != null">occurred_at = #{occurredAt},</if>
+            <if test="sourceType != null">source_type = #{sourceType},</if>
+            <if test="operatorId != null">operator_id = #{operatorId},</if>
+            <if test="deviceId != null">device_id = #{deviceId},</if>
+            <if test="linkedRepairId != null">linked_repair_id = #{linkedRepairId},</if>
+            <if test="linkedLogId != null">linked_log_id = #{linkedLogId},</if>
+        </set>
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteById">
+        DELETE FROM abnormal_records WHERE id = #{id}
+    </delete>
+
+    <select id="selectById" resultMap="EntityMap">
+        SELECT id,
+               mold_id,
+               abnormal_type,
+               measured_value,
+               threshold_value,
+               description,
+               occurred_at,
+               source_type,
+               operator_id,
+               device_id,
+               linked_repair_id,
+               linked_log_id,
+               created_at,
+               updated_at
+        FROM abnormal_records
+        WHERE id = #{id}
+    </select>
+
+    <select id="listByMoldId" resultMap="EntityMap">
+        SELECT id,
+               mold_id,
+               abnormal_type,
+               measured_value,
+               threshold_value,
+               description,
+               occurred_at,
+               source_type,
+               operator_id,
+               device_id,
+               linked_repair_id,
+               linked_log_id,
+               created_at,
+               updated_at
+        FROM abnormal_records
+        WHERE mold_id = #{moldId}
+        ORDER BY occurred_at DESC, created_at DESC
+    </select>
+
+    <select id="queryByCondition" resultMap="VOMap">
+        SELECT
+            a.id,
+            a.mold_id,
+            m.mold_code,
+            m.name         AS mold_name,
+            a.abnormal_type,
+            a.measured_value,
+            a.threshold_value,
+            a.description,
+            a.occurred_at,
+            a.source_type,
+            a.operator_id,
+            u.real_name    AS operator_name,
+            a.created_at
+        FROM abnormal_records a
+                 LEFT JOIN molds m ON a.mold_id = m.id
+                 LEFT JOIN users u ON a.operator_id = u.id
+        <where>
+            <if test="moldId != null and moldId != ''">
+                AND a.mold_id = #{moldId}
+            </if>
+            <if test="keyword != null and keyword != ''">
+                AND (
+                        m.name LIKE CONCAT('%', #{keyword}, '%')
+                        OR m.mold_code LIKE CONCAT('%', #{keyword}, '%')
+                    )
+            </if>
+            <if test="abnormalType != null">
+                AND a.abnormal_type = #{abnormalType}
+            </if>
+            <if test="operatorId != null and operatorId != ''">
+                AND a.operator_id = #{operatorId}
+            </if>
+            <if test="sourceType != null">
+                AND a.source_type = #{sourceType}
+            </if>
+            <if test="startTime != null">
+                AND a.occurred_at &gt;= #{startTime}
+            </if>
+            <if test="endTime != null">
+                AND a.occurred_at &lt;= #{endTime}
+            </if>
+        </where>
+        ORDER BY a.occurred_at DESC, a.created_at DESC
+    </select>
+
+    <select id="countByMoldIdSince" resultType="int">
+        SELECT COUNT(1) FROM abnormal_records
+        WHERE mold_id = #{moldId} AND occurred_at &gt;= #{since}
+    </select>
+
+    <select id="listMoldIdsWithAbnormalCountGeSince" resultType="java.lang.String">
+        SELECT mold_id FROM abnormal_records
+        WHERE occurred_at &gt;= #{since}
+        GROUP BY mold_id
+        HAVING COUNT(1) &gt;= #{threshold}
+    </select>
+</mapper>
+

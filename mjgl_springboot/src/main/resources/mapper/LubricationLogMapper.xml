@@ -1,0 +1,180 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zjb.mjgl.mapper.LubricationLogMapper">
+
+    <resultMap id="EntityMap" type="com.zjb.mjgl.pojo.entity.LubricationLogs">
+        <id property="id" column="id"/>
+        <result property="moldId" column="mold_id"/>
+        <result property="oilLevelPercent" column="oil_level_percent"/>
+        <result property="pressureKpa" column="pressure_kpa"/>
+        <result property="operatorId" column="operator_id"/>
+        <result property="operationTime" column="operation_time" jdbcType="TIMESTAMP"/>
+        <result property="createdAt" column="created_at" jdbcType="TIMESTAMP"/>
+        <result property="description" column="description"/>
+    </resultMap>
+
+    <resultMap id="VOMap" type="com.zjb.mjgl.pojo.vo.LubricationLogVO">
+        <id property="id" column="id"/>
+        <result property="moldId" column="mold_id"/>
+        <result property="moldCode" column="mold_code"/>
+        <result property="moldName" column="mold_name"/>
+        <result property="oilLevelPercent" column="oil_level_percent"/>
+        <result property="pressureKpa" column="pressure_kpa"/>
+        <result property="operatorId" column="operator_id"/>
+        <result property="operatorName" column="operator_name"/>
+        <result property="operationTime" column="operation_time"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="description" column="description"/>
+    </resultMap>
+
+    <insert id="insert">
+        INSERT INTO lubrication_logs (
+            id, mold_id, oil_level_percent, pressure_kpa,
+            operator_id, operation_time, created_at, description
+        ) VALUES (
+            #{id}, #{moldId}, #{oilLevelPercent}, #{pressureKpa},
+            #{operatorId}, #{operationTime}, #{createdAt}, #{description}
+        )
+    </insert>
+
+    <update id="update">
+        UPDATE lubrication_logs
+        <set>
+            <if test="moldId != null">mold_id = #{moldId},</if>
+            <if test="oilLevelPercent != null">oil_level_percent = #{oilLevelPercent},</if>
+            <if test="pressureKpa != null">pressure_kpa = #{pressureKpa},</if>
+            <if test="operatorId != null">operator_id = #{operatorId},</if>
+            <if test="operationTime != null">operation_time = #{operationTime},</if>
+            <if test="createdAt != null">created_at = #{createdAt},</if>
+            <if test="description != null">description = #{description},</if>
+        </set>
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteById">
+        DELETE FROM lubrication_logs WHERE id = #{id}
+    </delete>
+
+    <select id="selectById" resultMap="EntityMap">
+        SELECT id,
+               mold_id,
+               oil_level_percent,
+               pressure_kpa,
+               operator_id,
+               operation_time,
+               created_at,
+               description
+        FROM lubrication_logs
+        WHERE id = #{id}
+    </select>
+
+    <select id="listByMoldId" resultMap="EntityMap">
+        SELECT id,
+               mold_id,
+               oil_level_percent,
+               pressure_kpa,
+               operator_id,
+               operation_time,
+               created_at,
+               description
+        FROM lubrication_logs
+        WHERE mold_id = #{moldId}
+        ORDER BY operation_time DESC, created_at DESC
+    </select>
+
+    <!-- 条件查询：配合 PageHelper 分页，返回带模具、操作人名称的 VO -->
+    <select id="queryByCondition" resultMap="VOMap">
+        SELECT
+            l.id,
+            l.mold_id,
+            m.mold_code,
+            m.name       AS mold_name,
+            l.oil_level_percent,
+            l.pressure_kpa,
+            l.operator_id,
+            u.real_name  AS operator_name,
+            l.operation_time,
+            l.created_at,
+            l.description
+        FROM lubrication_logs l
+                 LEFT JOIN molds m ON l.mold_id = m.id
+                 LEFT JOIN users u ON l.operator_id = u.id
+        <where>
+            <if test="moldId != null and moldId != ''">
+                AND l.mold_id = #{moldId}
+            </if>
+            <if test="keyword != null and keyword != ''">
+                AND (
+                        m.name LIKE CONCAT('%', #{keyword}, '%')
+                        OR m.mold_code LIKE CONCAT('%', #{keyword}, '%')
+                    )
+            </if>
+            <if test="operatorId != null and operatorId != ''">
+                AND l.operator_id = #{operatorId}
+            </if>
+            <if test="startTime != null">
+                AND l.operation_time &gt;= #{startTime}
+            </if>
+            <if test="endTime != null">
+                AND l.operation_time &lt;= #{endTime}
+            </if>
+        </where>
+        ORDER BY l.operation_time DESC, l.created_at DESC
+    </select>
+
+    <!-- 预警规则引擎：统计时间窗内润滑指标满足条件的模具ID。metricField 仅允许 oil_level_percent / pressure_kpa -->
+    <select id="listMoldIdsWithLubricationMeetCondition" resultType="java.lang.String">
+        SELECT mold_id FROM lubrication_logs
+        WHERE operation_time &gt;= #{since}
+        GROUP BY mold_id
+        HAVING
+        <choose>
+            <when test="metricField == 'oil_level_percent' and metricType == 'max' and compareOp == 'gt'">MAX(oil_level_percent) &gt; #{valueThreshold}</when>
+            <when test="metricField == 'oil_level_percent' and metricType == 'max' and compareOp == 'ge'">MAX(oil_level_percent) &gt;= #{valueThreshold}</when>
+            <when test="metricField == 'oil_level_percent' and metricType == 'max' and compareOp == 'lt'">MAX(oil_level_percent) &lt; #{valueThreshold}</when>
+            <when test="metricField == 'oil_level_percent' and metricType == 'max' and compareOp == 'le'">MAX(oil_level_percent) &lt;= #{valueThreshold}</when>
+            <when test="metricField == 'oil_level_percent' and metricType == 'min' and compareOp == 'gt'">MIN(oil_level_percent) &gt; #{valueThreshold}</when>
+            <when test="metricField == 'oil_level_percent' and metricType == 'min' and compareOp == 'ge'">MIN(oil_level_percent) &gt;= #{valueThreshold}</when>
+            <when test="metricField == 'oil_level_percent' and metricType == 'min' and compareOp == 'lt'">MIN(oil_level_percent) &lt; #{valueThreshold}</when>
+            <when test="metricField == 'oil_level_percent' and metricType == 'min' and compareOp == 'le'">MIN(oil_level_percent) &lt;= #{valueThreshold}</when>
+            <when test="metricField == 'oil_level_percent' and metricType == 'avg' and compareOp == 'gt'">AVG(oil_level_percent) &gt; #{valueThreshold}</when>
+            <when test="metricField == 'oil_level_percent' and metricType == 'avg' and compareOp == 'ge'">AVG(oil_level_percent) &gt;= #{valueThreshold}</when>
+            <when test="metricField == 'oil_level_percent' and metricType == 'avg' and compareOp == 'lt'">AVG(oil_level_percent) &lt; #{valueThreshold}</when>
+            <when test="metricField == 'oil_level_percent' and metricType == 'avg' and compareOp == 'le'">AVG(oil_level_percent) &lt;= #{valueThreshold}</when>
+            <when test="metricField == 'pressure_kpa' and metricType == 'max' and compareOp == 'gt'">MAX(pressure_kpa) &gt; #{valueThreshold}</when>
+            <when test="metricField == 'pressure_kpa' and metricType == 'max' and compareOp == 'ge'">MAX(pressure_kpa) &gt;= #{valueThreshold}</when>
+            <when test="metricField == 'pressure_kpa' and metricType == 'max' and compareOp == 'lt'">MAX(pressure_kpa) &lt; #{valueThreshold}</when>
+            <when test="metricField == 'pressure_kpa' and metricType == 'max' and compareOp == 'le'">MAX(pressure_kpa) &lt;= #{valueThreshold}</when>
+            <when test="metricField == 'pressure_kpa' and metricType == 'min' and compareOp == 'gt'">MIN(pressure_kpa) &gt; #{valueThreshold}</when>
+            <when test="metricField == 'pressure_kpa' and metricType == 'min' and compareOp == 'ge'">MIN(pressure_kpa) &gt;= #{valueThreshold}</when>
+            <when test="metricField == 'pressure_kpa' and metricType == 'min' and compareOp == 'lt'">MIN(pressure_kpa) &lt; #{valueThreshold}</when>
+            <when test="metricField == 'pressure_kpa' and metricType == 'min' and compareOp == 'le'">MIN(pressure_kpa) &lt;= #{valueThreshold}</when>
+            <when test="metricField == 'pressure_kpa' and metricType == 'avg' and compareOp == 'gt'">AVG(pressure_kpa) &gt; #{valueThreshold}</when>
+            <when test="metricField == 'pressure_kpa' and metricType == 'avg' and compareOp == 'ge'">AVG(pressure_kpa) &gt;= #{valueThreshold}</when>
+            <when test="metricField == 'pressure_kpa' and metricType == 'avg' and compareOp == 'lt'">AVG(pressure_kpa) &lt; #{valueThreshold}</when>
+            <when test="metricField == 'pressure_kpa' and metricType == 'avg' and compareOp == 'le'">AVG(pressure_kpa) &lt;= #{valueThreshold}</when>
+            <otherwise>1=0</otherwise>
+        </choose>
+    </select>
+
+    <!-- 按次数触发：近N天内有至少 countThreshold 次单条记录满足条件 -->
+    <select id="listMoldIdsWithLubricationMeetCountGeSince" resultType="java.lang.String">
+        SELECT mold_id FROM lubrication_logs
+        WHERE operation_time &gt;= #{since}
+        AND
+        <choose>
+            <when test="metricField == 'oil_level_percent' and compareOp == 'gt'">oil_level_percent &gt; #{valueThreshold}</when>
+            <when test="metricField == 'oil_level_percent' and compareOp == 'ge'">oil_level_percent &gt;= #{valueThreshold}</when>
+            <when test="metricField == 'oil_level_percent' and compareOp == 'lt'">oil_level_percent &lt; #{valueThreshold}</when>
+            <when test="metricField == 'oil_level_percent' and compareOp == 'le'">oil_level_percent &lt;= #{valueThreshold}</when>
+            <when test="metricField == 'pressure_kpa' and compareOp == 'gt'">pressure_kpa &gt; #{valueThreshold}</when>
+            <when test="metricField == 'pressure_kpa' and compareOp == 'ge'">pressure_kpa &gt;= #{valueThreshold}</when>
+            <when test="metricField == 'pressure_kpa' and compareOp == 'lt'">pressure_kpa &lt; #{valueThreshold}</when>
+            <when test="metricField == 'pressure_kpa' and compareOp == 'le'">pressure_kpa &lt;= #{valueThreshold}</when>
+            <otherwise>1=0</otherwise>
+        </choose>
+        GROUP BY mold_id
+        HAVING COUNT(1) &gt;= #{countThreshold}
+    </select>
+</mapper>
+

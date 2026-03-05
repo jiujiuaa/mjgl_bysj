@@ -6,10 +6,14 @@ import com.zjb.mjgl.common.enums.RoleEnum;
 import com.zjb.mjgl.mapper.MoldsMapper;
 import com.zjb.mjgl.mapper.UseRecordMapper;
 import com.zjb.mjgl.pojo.dto.MoldUsageRecordDTO;
+import com.zjb.mjgl.pojo.entity.MoldAlertMessage;
 import com.zjb.mjgl.pojo.entity.MoldUsageRecords;
 import com.zjb.mjgl.pojo.entity.Molds;
 import com.zjb.mjgl.pojo.vo.MoldUsageRecordVO;
+import com.zjb.mjgl.pojo.vo.UserVO;
+import com.zjb.mjgl.service.AlertMessageService;
 import com.zjb.mjgl.service.UseRecordService;
+import com.zjb.mjgl.service.UserService;
 import com.zjb.mjgl.utils.IdUtil;
 import com.zjb.mjgl.utils.UserUtils;
 import lombok.extern.slf4j.Slf4j;
@@ -32,6 +36,10 @@ public class UseRecordServiceImpl implements UseRecordService {
     private UseRecordMapper useRecordMapper;
     @Resource
     private MoldsMapper moldsMapper;
+    @Resource
+    private AlertMessageService alertMessageService;
+    @Resource
+    private UserService userService;
     @Override
     public boolean createRecord(MoldUsageRecordDTO moldUsageRecordDTO) {
         // 确保有主键 ID
@@ -83,9 +91,48 @@ public class UseRecordServiceImpl implements UseRecordService {
                     int moldRows = moldsMapper.updateStatus(record.getMoldId(), moldStatus);
                     int recordRows = useRecordMapper.updateStatus(id, status);
                     boolean success = moldRows > 0 && recordRows > 0;
+                    if (success && status != null && status == 3) {
+                        notifyAdminsUsageNeedApproval(record.getMoldId(), id);
+                    }
                     return new Result<>("OK", success, success ? "更新成功" : "更新失败");
                 })
                 .orElseGet(() -> Result.fail("使用记录不存在"));
+    }
+
+    /**
+     * 使用记录进入“使用完成”时，向所有管理员发送“模具使用记录需要审批”通知
+     */
+    private void notifyAdminsUsageNeedApproval(String moldId, String recordId) {
+        try {
+            Molds mold = moldId != null && !moldId.trim().isEmpty()
+                    ? moldsMapper.selectById(moldId)
+                    : null;
+            String code = mold != null ? mold.getMoldCode() : null;
+            String name = mold != null ? mold.getName() : null;
+            if (code != null) code = code.trim();
+            if (name != null) name = name.trim();
+            String moldInfo = (code != null && !code.isEmpty() ? code : "")
+                    + (name != null && !name.isEmpty() ? (code != null && !code.isEmpty() ? " " : "") + name : "");
+            if (moldInfo.isEmpty()) moldInfo = "未知模具";
+
+            Result<List<UserVO>> usersResult = userService.getAllUsers();
+            if (usersResult.getCode() != 200 || usersResult.getData() == null) return;
+            List<String> adminIds = usersResult.getData().stream()
+                    .filter(u -> u.getRole() == RoleEnum.ADMIN)
+                    .map(UserVO::getId)
+                    .filter(uid -> uid != null && !uid.trim().isEmpty())
+                    .collect(Collectors.toList());
+            if (adminIds.isEmpty()) return;
+
+            MoldAlertMessage message = new MoldAlertMessage();
+            message.setTitle("模具使用记录需要审批");
+            message.setContent("模具「" + moldInfo + "」使用已结束，请进行合理性审批。");
+            message.setType("INFO");
+            message.setBiz_type("usage_approval");
+            alertMessageService.sendAlertToUsers(adminIds, message);
+        } catch (Exception e) {
+            log.warn("通知管理员使用记录审批失败: {}", e.getMessage());
+        }
     }
 
     @Override
@@ -212,6 +259,39 @@ public class UseRecordServiceImpl implements UseRecordService {
         }
         int rows = useRecordMapper.update(moldUsageRecordDTO);
         return rows > 0 ? Result.success() : Result.fail("更新使用记录失败");
+    }
+
+    @Override
+    public Result<?> approveUsage(String id, Integer approvalStatus, String comment) {
+        if (id == null || id.trim().isEmpty()) {
+            return Result.fail("使用记录ID不能为空");
+        }
+        if (approvalStatus == null || approvalStatus < 1 || approvalStatus > 2) {
+            return Result.fail("审批状态不合法");
+        }
+
+        return Optional.ofNullable(UserUtils.getCurrentUserDetails())
+                .map(user -> {
+                    RoleEnum role = user.getRole();
+                    boolean isManager = role == RoleEnum.ADMIN || role == RoleEnum.INSPECTOR;
+                    if (!isManager) {
+                        return Result.fail("当前用户无审批权限");
+                    }
+                    String trimmedComment = Optional.ofNullable(comment)
+                            .map(String::trim)
+                            .filter(s -> !s.isEmpty())
+                            .orElse(null);
+
+                    int rows = useRecordMapper.updateUsageApproval(
+                            id,
+                            approvalStatus,
+                            trimmedComment,
+                            user.getId(),
+                            LocalDateTime.now()
+                    );
+                    return rows > 0 ? Result.success() : Result.fail("更新合理性审批失败");
+                })
+                .orElseGet(() -> Result.fail("未登录用户无法审批"));
     }
 
     public static Long diffHours(LocalDateTime start, LocalDateTime end) {

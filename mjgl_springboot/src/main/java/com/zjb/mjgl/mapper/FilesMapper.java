@@ -32,4 +32,11 @@ public interface FilesMapper {
      * 根据单个文件ID查询
      */
     Files selectById(String id);
+
+    /**
+     * 通用：根据业务类型 + 业务ID（可选文件类型）查询文件
+     */
+    List<Files> selectByBiz(@Param("bizType") String bizType,
+                            @Param("bizId") String bizId,
+                            @Param("fileType") String fileType);
 }

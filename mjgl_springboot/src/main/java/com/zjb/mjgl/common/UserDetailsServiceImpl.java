@@ -28,7 +28,7 @@ public class UserDetailsServiceImpl implements UserDetailsService {
             // 可选：给默认角色，避免空权限
             authorities = Collections.singletonList("ROLE_USER");
         }
-        log.info(user.toString());
+       // log.info(user.toString());
         if (user == null) {
             throw new UsernameNotFoundException(username);
         }

@@ -10,6 +10,10 @@ export default defineConfig({
     vue(),
     vueDevTools(),
   ],
+  define: {
+    // 兼容 sockjs-client 在浏览器环境中使用 Node 全局变量 global
+    global: 'window',
+  },
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url))
@@ -20,6 +24,11 @@ export default defineConfig({
       '/api': {
         target: 'http://localhost:8080',
         changeOrigin: true,
+      },
+      // WebSocket 握手与后续帧都代理到后端
+      '/ws': {
+        target: 'http://localhost:8080',
+        ws: true,
       },
     },
   },

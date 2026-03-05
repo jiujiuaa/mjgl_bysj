@@ -1,0 +1,163 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zjb.mjgl.mapper.TemperatureLogMapper">
+
+    <resultMap id="EntityMap" type="com.zjb.mjgl.pojo.entity.TemperatureLogs">
+        <id property="id" column="id"/>
+        <result property="moldId" column="mold_id"/>
+        <result property="sensorLocation" column="sensor_location"/>
+        <result property="temperature" column="temperature"/>
+        <result property="operatorId" column="operator_id"/>
+        <result property="operationTime" column="operation_time" jdbcType="TIMESTAMP"/>
+        <result property="createdAt" column="created_at" jdbcType="TIMESTAMP"/>
+        <result property="description" column="description"/>
+    </resultMap>
+
+    <resultMap id="VOMap" type="com.zjb.mjgl.pojo.vo.TemperatureLogVO">
+        <id property="id" column="id"/>
+        <result property="moldId" column="mold_id"/>
+        <result property="moldCode" column="mold_code"/>
+        <result property="moldName" column="mold_name"/>
+        <result property="sensorLocation" column="sensor_location"/>
+        <result property="temperature" column="temperature"/>
+        <result property="operatorId" column="operator_id"/>
+        <result property="operatorName" column="operator_name"/>
+        <result property="operationTime" column="operation_time"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="description" column="description"/>
+    </resultMap>
+
+    <insert id="insert">
+        INSERT INTO temperature_logs (
+            id, mold_id, sensor_location, temperature,
+            operator_id, operation_time, created_at, description
+        ) VALUES (
+            #{id}, #{moldId}, #{sensorLocation}, #{temperature},
+            #{operatorId}, #{operationTime}, #{createdAt}, #{description}
+        )
+    </insert>
+
+    <update id="update">
+        UPDATE temperature_logs
+        <set>
+            <if test="moldId != null">mold_id = #{moldId},</if>
+            <if test="sensorLocation != null">sensor_location = #{sensorLocation},</if>
+            <if test="temperature != null">temperature = #{temperature},</if>
+            <if test="operatorId != null">operator_id = #{operatorId},</if>
+            <if test="operationTime != null">operation_time = #{operationTime},</if>
+            <if test="createdAt != null">created_at = #{createdAt},</if>
+            <if test="description != null">description = #{description},</if>
+        </set>
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteById">
+        DELETE FROM temperature_logs WHERE id = #{id}
+    </delete>
+
+    <select id="selectById" resultMap="EntityMap">
+        SELECT id,
+               mold_id,
+               sensor_location,
+               temperature,
+               operator_id,
+               operation_time,
+               created_at,
+               description
+        FROM temperature_logs
+        WHERE id = #{id}
+    </select>
+
+    <select id="listByMoldId" resultMap="EntityMap">
+        SELECT id,
+               mold_id,
+               sensor_location,
+               temperature,
+               operator_id,
+               operation_time,
+               created_at,
+               description
+        FROM temperature_logs
+        WHERE mold_id = #{moldId}
+        ORDER BY operation_time DESC, created_at DESC
+    </select>
+
+    <!-- 条件查询：配合 PageHelper 分页，返回带模具、操作人名称的 VO -->
+    <select id="queryByCondition" resultMap="VOMap">
+        SELECT
+            t.id,
+            t.mold_id,
+            m.mold_code,
+            m.name         AS mold_name,
+            t.sensor_location,
+            t.temperature,
+            t.operator_id,
+            u.real_name    AS operator_name,
+            t.operation_time,
+            t.created_at,
+            t.description
+        FROM temperature_logs t
+                 LEFT JOIN molds m ON t.mold_id = m.id
+                 LEFT JOIN users u ON t.operator_id = u.id
+        <where>
+            <if test="moldId != null and moldId != ''">
+                AND t.mold_id = #{moldId}
+            </if>
+            <if test="keyword != null and keyword != ''">
+                AND (
+                        m.name LIKE CONCAT('%', #{keyword}, '%')
+                        OR m.mold_code LIKE CONCAT('%', #{keyword}, '%')
+                    )
+            </if>
+            <if test="sensorLocation != null and sensorLocation != ''">
+                AND t.sensor_location LIKE CONCAT('%', #{sensorLocation}, '%')
+            </if>
+            <if test="operatorId != null and operatorId != ''">
+                AND t.operator_id = #{operatorId}
+            </if>
+            <if test="startTime != null">
+                AND t.operation_time &gt;= #{startTime}
+            </if>
+            <if test="endTime != null">
+                AND t.operation_time &lt;= #{endTime}
+            </if>
+        </where>
+        ORDER BY t.operation_time DESC, t.created_at DESC
+    </select>
+
+    <!-- 预警规则引擎：统计时间窗内温度满足条件的模具ID -->
+    <select id="listMoldIdsWithTemperatureMeetCondition" resultType="java.lang.String">
+        SELECT mold_id FROM temperature_logs
+        WHERE operation_time &gt;= #{since}
+        GROUP BY mold_id
+        HAVING
+        <choose>
+            <when test="metricType == 'max' and compareOp == 'gt'">MAX(temperature) &gt; #{valueThreshold}</when>
+            <when test="metricType == 'max' and compareOp == 'ge'">MAX(temperature) &gt;= #{valueThreshold}</when>
+            <when test="metricType == 'max' and compareOp == 'lt'">MAX(temperature) &lt; #{valueThreshold}</when>
+            <when test="metricType == 'max' and compareOp == 'le'">MAX(temperature) &lt;= #{valueThreshold}</when>
+            <when test="metricType == 'avg' and compareOp == 'gt'">AVG(temperature) &gt; #{valueThreshold}</when>
+            <when test="metricType == 'avg' and compareOp == 'ge'">AVG(temperature) &gt;= #{valueThreshold}</when>
+            <when test="metricType == 'avg' and compareOp == 'lt'">AVG(temperature) &lt; #{valueThreshold}</when>
+            <when test="metricType == 'avg' and compareOp == 'le'">AVG(temperature) &lt;= #{valueThreshold}</when>
+            <otherwise>1=0</otherwise>
+        </choose>
+    </select>
+
+    <!-- 按次数触发：近N天内有至少 countThreshold 次单条记录温度满足条件 -->
+    <select id="listMoldIdsWithTemperatureMeetCountGeSince" resultType="java.lang.String">
+        SELECT mold_id FROM temperature_logs
+        WHERE operation_time &gt;= #{since}
+        AND
+        <choose>
+            <when test="compareOp == 'gt'">temperature &gt; #{valueThreshold}</when>
+            <when test="compareOp == 'ge'">temperature &gt;= #{valueThreshold}</when>
+            <when test="compareOp == 'lt'">temperature &lt; #{valueThreshold}</when>
+            <when test="compareOp == 'le'">temperature &lt;= #{valueThreshold}</when>
+            <otherwise>1=0</otherwise>
+        </choose>
+        GROUP BY mold_id
+        HAVING COUNT(1) &gt;= #{countThreshold}
+    </select>
+</mapper>
+

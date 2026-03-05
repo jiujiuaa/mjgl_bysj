@@ -33,6 +33,15 @@ public interface UseRecordMapper {
 
     int updateStatus(@Param("id") String id, @Param("status") int status);
 
+    /**
+     * 更新使用记录的合理性审批信息
+     */
+    int updateUsageApproval(@Param("id") String id,
+                            @Param("status") Integer status,
+                            @Param("comment") String comment,
+                            @Param("approverId") String approverId,
+                            @Param("approveTime") java.time.LocalDateTime approveTime);
+
     MoldUsageRecords getRecordById(@Param("id") String id);
 
     /**

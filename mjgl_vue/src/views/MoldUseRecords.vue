@@ -1,60 +1,10 @@
 <template>
   <div class="mold-use-records-container">
-    <!-- 左侧边栏，与模具管理保持一致风格 -->
-    <aside class="sidebar">
-      <div class="sidebar-header">
-        <div class="sidebar-logo">管理系统</div>
-      </div>
-      <nav class="sidebar-menu">
-        <div
-          class="menu-item"
-          :class="{ active: $route.path === '/user-management' }"
-          @click="goUserManagement"
-        >
-          <span class="menu-icon">👤</span>
-          <span>用户管理</span>
-        </div>
-        <div
-          class="menu-item"
-          :class="{ active: $route.path === '/mold-management' }"
-          @click="goMoldManagement"
-        >
-          <span class="menu-icon">🧱</span>
-          <span>模具管理</span>
-        </div>
-        <div
-          class="menu-item parent-item"
-          @click="showOpsChildren = !showOpsChildren"
-        >
-          <span class="menu-icon">🛠</span>
-          <span>运维管理</span>
-          <span class="submenu-arrow">{{ showOpsChildren ? '▾' : '▸' }}</span>
-        </div>
-        <div
-          v-if="showOpsChildren"
-          class="menu-item child-item"
-          :class="{ active: $route.path === '/mold-use-records' }"
-        >
-          <span class="menu-icon">📒</span>
-          <span>使用记录</span>
-        </div>
-        <div class="menu-item disabled">
-          <span class="menu-icon">📈</span>
-          <span>监测与异常</span>
-        </div>
-        <div class="menu-item disabled">
-          <span class="menu-icon">❤️</span>
-          <span>健康评估</span>
-        </div>
-      </nav>
-      <div class="sidebar-footer">
-        <span class="sidebar-username">{{ authStore.username }}</span>
-        <button class="sidebar-logout" @click="handleLogout">退出登录</button>
-      </div>
-    </aside>
+    <!-- 全局左侧边栏 -->
+    <AppSidebar />
 
     <!-- 右侧主区域 -->
-    <div class="layout-main">
+    <div class="layout-main" v-back-to-top>
       <header class="top-header">
         <div class="top-title">模具使用记录</div>
         <div class="top-subtitle">查看与维护模具使用/借出记录</div>
@@ -87,6 +37,15 @@
                 <!-- 查询条件：模具编号 + 状态 + 使用类型（模具ID 仅通过路由/内部使用，不在界面展示） -->
                 <div class="query-form">
                   <div class="query-row">
+                    <div class="query-item">
+                      <label>选择模具</label>
+                      <select v-model="query.moldId" class="form-input query-input">
+                        <option value="">全部</option>
+                        <option v-for="m in moldOptions" :key="m.id" :value="m.id">
+                          {{ (m.moldCode || '') + (m.name ? ` - ${m.name}` : '') || m.id }}
+                        </option>
+                      </select>
+                    </div>
                     <div class="query-item">
                       <label>模具名称/编号</label>
                       <input
@@ -146,13 +105,14 @@
                           <th>借用单位</th>
                           <th>状态</th>
                           <th>归还验收</th>
+                          <th>合理性审批</th>
                           <th>创建时间</th>
                           <th>操作</th>
                         </tr>
                       </thead>
                       <tbody>
                         <tr v-if="filteredRecords.length === 0">
-                          <td colspan="15" class="empty-cell">暂无使用记录</td>
+                          <td colspan="18" class="empty-cell">暂无使用记录</td>
                         </tr>
                         <tr
                           v-for="record in filteredRecords"
@@ -185,9 +145,38 @@
                             </span>
                             <span v-else>-</span>
                           </td>
+                          <td>
+                            <span
+                              v-if="record.usageApprovalStatus === 1"
+                              class="status-normal"
+                            >
+                              合理
+                            </span>
+                            <span
+                              v-else-if="record.usageApprovalStatus === 2"
+                              class="status-danger"
+                            >
+                              存在问题
+                            </span>
+                            <span v-else>-</span>
+                          </td>
                           <td>{{ formatDate(record.createdAt) }}</td>
                           <td>
                             <div class="action-buttons">
+                              <button
+                                class="action-btn edit-btn"
+                                @click="openDetailDialog(record)"
+                              >
+                                详情
+                              </button>
+                              <button
+                                v-if="isAdmin && record.status === 3"
+                                class="action-btn status-btn"
+                                :disabled="rowLoadingId === record.id"
+                                @click="openApprovalDialog(record)"
+                              >
+                                审批
+                              </button>
                               <button
                                 class="action-btn edit-btn"
                                 @click="handleEdit(record)"
@@ -372,6 +361,155 @@
       </div>
     </div>
 
+    <!-- 使用记录详情对话框（只读） -->
+    <div v-if="showDetailDialog" class="dialog-overlay" @click="closeDetailDialog">
+      <div class="dialog-content" @click.stop>
+        <div class="dialog-header">
+          <h3>使用记录详情</h3>
+          <button class="dialog-close" @click="closeDetailDialog">×</button>
+        </div>
+        <div class="dialog-body" v-if="detailRecord">
+          <div class="form-section-title">基本信息</div>
+          <p class="mold-info-text">
+            模具：{{ detailRecord.moldName || '-' }} / {{ detailRecord.moldCode || '-' }} /
+            {{ detailRecord.moldCategory || '-' }}
+          </p>
+          <div class="form-row">
+            <div class="form-group">
+              <label>使用类型</label>
+              <div class="form-input readonly-text">
+                {{ detailRecord.usageTypeDesc || formatUsageType(detailRecord.usageType) }}
+              </div>
+            </div>
+            <div class="form-group">
+              <label>状态</label>
+              <div class="form-input readonly-text">
+                {{ detailRecord.statusDesc || formatStatus(detailRecord.status) }}
+              </div>
+            </div>
+          </div>
+          <div class="form-section-title">时间信息</div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>预计开始</label>
+              <div class="form-input readonly-text">{{ formatDate(detailRecord.scheduledStartTime) }}</div>
+            </div>
+            <div class="form-group">
+              <label>预计结束</label>
+              <div class="form-input readonly-text">{{ formatDate(detailRecord.scheduledEndTime) }}</div>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>实际开始</label>
+              <div class="form-input readonly-text">{{ formatDate(detailRecord.actualStartTime) }}</div>
+            </div>
+            <div class="form-group">
+              <label>实际结束</label>
+              <div class="form-input readonly-text">{{ formatDate(detailRecord.actualEndTime) }}</div>
+            </div>
+          </div>
+          <div class="form-section-title">借用与归还</div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>申请人</label>
+              <div class="form-input readonly-text">{{ detailRecord.applicantName || '-' }}</div>
+            </div>
+            <div class="form-group">
+              <label>借用人</label>
+              <div class="form-input readonly-text">{{ detailRecord.borrowerName || '-' }}</div>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>借用单位</label>
+              <div class="form-input readonly-text">{{ detailRecord.borrowerCompany || '-' }}</div>
+            </div>
+            <div class="form-group">
+              <label>用途说明</label>
+              <div class="form-input readonly-text">{{ detailRecord.purpose || '-' }}</div>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>归还验收</label>
+              <div class="form-input readonly-text">
+                <span v-if="detailRecord.inspectionPassed === true" class="status-normal">通过</span>
+                <span v-else-if="detailRecord.inspectionPassed === false" class="status-danger">未通过</span>
+                <span v-else>-</span>
+              </div>
+            </div>
+            <div class="form-group">
+              <label>归还备注</label>
+              <div class="form-input readonly-text">{{ detailRecord.returnRemarks || '-' }}</div>
+            </div>
+          </div>
+          <div class="form-section-title">合理性审批</div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>审批结果</label>
+              <div class="form-input readonly-text">
+                {{ formatApprovalStatus(detailRecord.usageApprovalStatus) }}
+              </div>
+            </div>
+            <div class="form-group">
+              <label>审批意见</label>
+              <div class="form-input readonly-text">{{ detailRecord.usageApprovalComment || '-' }}</div>
+            </div>
+          </div>
+          <div class="dialog-actions">
+            <button type="button" class="cancel-button" @click="closeDetailDialog">关闭</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 合理性审批对话框 -->
+    <div v-if="showApprovalDialog" class="dialog-overlay" @click="closeApprovalDialog">
+      <div class="dialog-content dialog-content-sm" @click.stop>
+        <div class="dialog-header">
+          <h3>合理性审批</h3>
+          <button class="dialog-close" @click="closeApprovalDialog">×</button>
+        </div>
+        <div class="dialog-body">
+          <form @submit.prevent="handleApprovalSubmit">
+            <div class="form-group">
+              <label for="approvalStatus">审批结果</label>
+              <select
+                id="approvalStatus"
+                v-model.number="approvalForm.usageApprovalStatus"
+                class="form-input"
+              >
+                <option :value="0">未审核</option>
+                <option :value="1">合理</option>
+                <option :value="2">存在问题</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="approvalComment">审批意见</label>
+              <input
+                id="approvalComment"
+                v-model="approvalForm.usageApprovalComment"
+                type="text"
+                class="form-input"
+                placeholder="可填写原因分析或改进建议"
+              />
+            </div>
+            <div v-if="approvalDialogError" class="error-message">
+              <span class="message-icon">⚠</span>
+              {{ approvalDialogError }}
+            </div>
+            <div class="dialog-actions">
+              <button type="submit" class="submit-button" :disabled="approvalLoading">
+                {{ approvalLoading ? '提交中...' : '提交' }}
+              </button>
+              <button type="button" class="cancel-button" @click="closeApprovalDialog">取消</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
     <!-- 新建使用记录对话框 -->
     <div
       v-if="showCreateDialog"
@@ -512,6 +650,7 @@
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import AppSidebar from '@/components/AppSidebar.vue'
 import HourDateTimePicker from '@/components/HourDateTimePicker.vue'
 import {
   fetchAllUseRecords,
@@ -521,6 +660,7 @@ import {
   createUseRecord,
   updateUseRecordStatus,
   deleteUseRecord,
+  approveUseRecord,
 } from '@/api/useRecords'
 import { fetchMolds } from '@/api/molds'
 
@@ -529,6 +669,7 @@ const route = useRoute()
 const authStore = useAuthStore()
 
 const showOpsChildren = ref(true)
+const showMonitoringChildren = ref(true)
 
 const listLoading = ref(false)
 const successMessage = ref('')
@@ -556,6 +697,18 @@ const isEndUseMode = ref(false)
 const showCreateDialog = ref(false)
 const createLoading = ref(false)
 const createDialogErrorMessage = ref('')
+
+const showDetailDialog = ref(false)
+const detailRecord = ref(null)
+
+const showApprovalDialog = ref(false)
+const approvalForm = reactive({
+  id: '',
+  usageApprovalStatus: 0,
+  usageApprovalComment: '',
+})
+const approvalLoading = ref(false)
+const approvalDialogError = ref('')
 
 const editForm = reactive({
   id: '',
@@ -586,6 +739,13 @@ const createForm = reactive({
   borrowerCompany: '',
   purpose: '',
 })
+
+const isManager = computed(() => {
+  const role = authStore.role
+  return role === 'ADMIN' || role === 'INSPECTOR'
+})
+
+const isAdmin = computed(() => authStore.role === 'ADMIN')
 
 const filteredRecords = computed(() => {
   return records.value.filter((r) => {
@@ -729,6 +889,53 @@ const handleEdit = async (record, endUse = false) => {
 const closeEditDialog = () => {
   showEditDialog.value = false
   isEndUseMode.value = false
+}
+
+const openDetailDialog = (record) => {
+  detailRecord.value = { ...record }
+  showDetailDialog.value = true
+}
+
+const closeDetailDialog = () => {
+  showDetailDialog.value = false
+  detailRecord.value = null
+}
+
+const openApprovalDialog = (record) => {
+  approvalForm.id = record.id
+  approvalForm.usageApprovalStatus = record.usageApprovalStatus ?? 0
+  const rawComment = record.usageApprovalComment
+  approvalForm.usageApprovalComment = (rawComment == null || rawComment === 'null' || String(rawComment).trim() === '') ? '' : String(rawComment)
+  approvalDialogError.value = ''
+  showApprovalDialog.value = true
+}
+
+const closeApprovalDialog = () => {
+  showApprovalDialog.value = false
+  approvalForm.id = ''
+  approvalForm.usageApprovalStatus = 0
+  approvalForm.usageApprovalComment = ''
+  approvalDialogError.value = ''
+}
+
+const handleApprovalSubmit = async () => {
+  if (!approvalForm.id) return
+  approvalDialogError.value = ''
+  approvalLoading.value = true
+  try {
+    await approveUseRecord(approvalForm.id, {
+      status: approvalForm.usageApprovalStatus ?? 0,
+      comment: approvalForm.usageApprovalComment || null,
+    })
+    successMessage.value = '审批已提交'
+    showApprovalDialog.value = false
+    await loadRecords()
+    setTimeout(() => { successMessage.value = '' }, 3000)
+  } catch (e) {
+    approvalDialogError.value = e.message || '审批提交失败'
+  } finally {
+    approvalLoading.value = false
+  }
 }
 
 const handleSave = async () => {
@@ -919,17 +1126,15 @@ const getStatusClass = (status) => {
 
 const formatDate = (val) => {
   if (!val) return '-'
-  if (typeof val === 'string' && val.includes(' ')) {
-    return val
-  }
-  const date = new Date(val)
-  if (Number.isNaN(date.getTime())) return val
-  return date.toLocaleString('zh-CN', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-  })
+  const date = new Date(typeof val === 'string' ? val.replace(' ', 'T') : val)
+  if (Number.isNaN(date.getTime())) return String(val)
+  const pad = (n) => String(n).padStart(2, '0')
+  const y = date.getFullYear()
+  const M = pad(date.getMonth() + 1)
+  const d = pad(date.getDate())
+  const h = pad(date.getHours())
+  const m = pad(date.getMinutes())
+  return `${y}/${M}/${d} ${h}:${m}`
 }
 
 const handleLogout = () => {
@@ -945,6 +1150,36 @@ const goMoldManagement = () => {
   router.push('/mold-management')
 }
 
+const goUseRecords = () => {
+  router.push('/mold-use-records')
+}
+
+const goRepairRecords = () => {
+  router.push('/repair-records')
+}
+
+const goMaintenancePlans = () => {
+  router.push('/maintenance-plans')
+}
+
+const goMaintenanceLogs = () => {
+  router.push('/maintenance-logs')
+}
+
+const goMaintenanceReminders = () => {
+  router.push('/maintenance-reminders')
+}
+
+const goMonitoringManual = () => {
+  router.push('/monitoring-manual')
+}
+
+const formatApprovalStatus = (val) => {
+  if (val === 1) return '合理'
+  if (val === 2) return '存在问题'
+  return '未审核'
+}
+
 onMounted(() => {
   if (!authStore.isAuthenticated) {
     router.push('/login')
@@ -957,7 +1192,7 @@ onMounted(() => {
   if (route.query.moldCode) {
     query.moldKeyword = String(route.query.moldCode)
   }
-  loadRecords()
+  loadMoldOptions().then(() => loadRecords())
 })
 </script>
 
@@ -1009,7 +1244,7 @@ onMounted(() => {
 
 .parent-item {
   font-weight: 600;
-  justify-content: space-between;
+  justify-content: flex-start;
 }
 
 .child-item {
@@ -1366,6 +1601,10 @@ onMounted(() => {
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
   display: flex;
   flex-direction: column;
+}
+
+.dialog-content-sm {
+  max-width: 420px;
 }
 
 .dialog-header {

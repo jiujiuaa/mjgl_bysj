@@ -42,6 +42,7 @@ public class FilesServiceImpl implements FilesService {
                 .uploadUserId(UserUtils.getCurrentUserId())
                 .uploadTime(LocalDateTime.now())
                 .description(param.getDescription())
+                .imageStatus(param.getImageStatus())
                 .build()
         ).collect(Collectors.toList());
 
@@ -83,5 +84,17 @@ public class FilesServiceImpl implements FilesService {
         }
         // 生成7天有效的预览URL
         return minioUtil.getObjectUrl(file.getFileName(), 7);
+    }
+
+    @Override
+    public List<FileVO> listByBiz(String bizType, String bizId, String fileType) {
+        List<Files> files = filesMapper.selectByBiz(bizType, bizId, fileType);
+        return files.stream()
+                .map(f -> {
+                    FileVO vo = new FileVO();
+                    BeanUtils.copyProperties(f, vo);
+                    return vo;
+                })
+                .collect(Collectors.toList());
     }
 }

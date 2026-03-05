@@ -14,6 +14,7 @@ import {
 export const useAuthStore = defineStore('auth', () => {
   // 状态
   const token = ref(localStorage.getItem('token') || '')
+  const userId = ref(localStorage.getItem('userId') || '')
   const username = ref(localStorage.getItem('username') || '')
   const role = ref(localStorage.getItem('role') || '')
   const users = ref([])
@@ -32,9 +33,11 @@ export const useAuthStore = defineStore('auth', () => {
       // response 是 Result<LoginVO> 对象
       if (response.code === 200 && response.data) {
         token.value = response.data.token
+        userId.value = response.data.userId || ''
         username.value = response.data.username
         role.value = response.data.role || ''
         localStorage.setItem('token', response.data.token)
+        localStorage.setItem('userId', response.data.userId || '')
         localStorage.setItem('username', response.data.username)
         localStorage.setItem('role', response.data.role || '')
         return { success: true }
@@ -55,10 +58,12 @@ export const useAuthStore = defineStore('auth', () => {
       console.error('logout error:', error)
     }
     token.value = ''
+    userId.value = ''
     username.value = ''
     role.value = ''
     users.value = []
     localStorage.removeItem('token')
+    localStorage.removeItem('userId')
     localStorage.removeItem('username')
     localStorage.removeItem('role')
   }
@@ -153,6 +158,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   return {
     token,
+    userId,
     username,
     role,
     users,

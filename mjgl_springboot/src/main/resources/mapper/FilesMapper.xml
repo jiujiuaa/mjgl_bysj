@@ -18,7 +18,8 @@
                file_size,
                upload_user_id,
                upload_time,
-               description
+               description,
+               image_status AS imageStatus
         FROM files
         WHERE biz_type = 'mold'
           AND biz_id = #{moldId}
@@ -37,7 +38,8 @@
             file_size,
             upload_user_id,
             upload_time,
-            description
+            description,
+            image_status
         )
         VALUES
         <foreach collection="list" item="item" separator=",">
@@ -52,7 +54,8 @@
                 #{item.fileSize},
                 #{item.uploadUserId},
                 #{item.uploadTime},
-                #{item.description}
+                #{item.description},
+                #{item.imageStatus}
             )
         </foreach>
     </insert>
@@ -68,7 +71,8 @@
                file_size,
                upload_user_id,
                upload_time,
-               description
+               description,
+               image_status AS imageStatus
         FROM files
         WHERE id = #{id}
     </select>
@@ -84,7 +88,8 @@
                file_size,
                upload_user_id,
                upload_time,
-               description
+               description,
+               image_status AS imageStatus
         FROM files
         WHERE id IN
         <foreach collection="ids" item="id" open="(" separator="," close=")">
@@ -99,4 +104,27 @@
             #{id}
         </foreach>
     </delete>
+
+    <!-- 通用：根据 bizType + bizId（可选 fileType）查询文件 -->
+    <select id="selectByBiz" resultType="com.zjb.mjgl.pojo.entity.Files">
+        SELECT id,
+               biz_type,
+               biz_id,
+               file_type,
+               original_name,
+               file_name AS fileName,
+               file_path,
+               file_size,
+               upload_user_id,
+               upload_time,
+               description,
+               image_status AS imageStatus
+        FROM files
+        WHERE biz_type = #{bizType}
+          AND biz_id = #{bizId}
+        <if test="fileType != null and fileType != ''">
+          AND file_type = #{fileType}
+        </if>
+        ORDER BY upload_time DESC
+    </select>
 </mapper>

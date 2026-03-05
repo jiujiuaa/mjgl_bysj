@@ -1,0 +1,204 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.zjb.mjgl.mapper.MaintenancePlanMapper">
+    <insert id="insert" keyProperty="id" >
+        insert into maintenance_plans(id,name, specific_mold_id, interval_hours, scheduled_day_of_month,
+                                      maintenance_type, description, standard_procedures, estimated_duration_hours,
+                                      required_materials, is_active, created_by, created_at, updated_at)
+        values (#{id},#{name}, #{specificMoldId}, #{intervalHours}, #{scheduledDayOfMonth}, #{maintenanceType},
+                #{description}, #{standardProcedures}, #{estimatedDurationHours}, #{requiredMaterials}, #{isActive},
+                #{createdBy}, #{createdAt}, #{updatedAt})
+    </insert>
+    <insert id="insertBatch" keyProperty="id" >
+        insert into maintenance_plans(id,name, specific_mold_id, interval_hours, scheduled_day_of_month,
+        maintenance_type, description, standard_procedures, estimated_duration_hours, required_materials, is_active,
+        created_by, created_at, updated_at)
+        values
+        <foreach collection="entities" item="entity" separator=",">
+            (#{entity.id},#{entity.name}, #{entity.specificMoldId}, #{entity.intervalHours},
+            #{entity.scheduledDayOfMonth}, #{entity.maintenanceType}, #{entity.description},
+            #{entity.standardProcedures}, #{entity.estimatedDurationHours}, #{entity.requiredMaterials},
+            #{entity.isActive}, #{entity.createdBy}, #{entity.createdAt}, #{entity.updatedAt})
+        </foreach>
+    </insert>
+    <update id="update">
+        update maintenance_plans
+        <set>
+            <if test="name != null and name != ''">
+                name = #{name},
+            </if>
+            <!-- 去掉模具类型ID的更新 -->
+            <if test="intervalHours != null">
+                interval_hours = #{intervalHours},
+            </if>
+            <if test="scheduledDayOfMonth != null">
+                scheduled_day_of_month = #{scheduledDayOfMonth},
+            </if>
+            <if test="maintenanceType != null and maintenanceType != ''">
+                maintenance_type = #{maintenanceType},
+            </if>
+            <if test="description != null and description != ''">
+                description = #{description},
+            </if>
+            <if test="standardProcedures != null and standardProcedures != ''">
+                standard_procedures = #{standardProcedures},
+            </if>
+            <if test="estimatedDurationHours != null">
+                estimated_duration_hours = #{estimatedDurationHours},
+            </if>
+            <if test="requiredMaterials != null and requiredMaterials != ''">
+                required_materials = #{requiredMaterials},
+            </if>
+            <if test="isActive != null">
+                is_active = #{isActive},
+            </if>
+            <if test="createdBy != null and createdBy != ''">
+                created_by = #{createdBy},
+            </if>
+            <if test="createdAt != null">
+                created_at = #{createdAt},
+            </if>
+            <if test="updatedAt != null">
+                updated_at = #{updatedAt},
+            </if>
+        </set>
+        where id = #{id}
+    </update>
+    <delete id="deleteById">
+        delete
+        from maintenance_plans
+        where id = #{id}
+    </delete>
+
+    <update id="updateActiveStatus">
+        update maintenance_plans
+        set is_active = #{isActive}
+        where id = #{id}
+    </update>
+    <resultMap type="com.zjb.mjgl.pojo.entity.MaintenancePlans" id="MaintenancePlansMap">
+        <result property="id" column="id" jdbcType="VARCHAR"/>
+        <result property="name" column="name" jdbcType="VARCHAR"/>
+        <result property="moldTypeId" column="mold_type_id" jdbcType="VARCHAR"/>
+        <result property="specificMoldId" column="specific_mold_id" jdbcType="VARCHAR"/>
+        <result property="intervalHours" column="interval_hours" jdbcType="INTEGER"/>
+        <result property="scheduledDayOfMonth" column="scheduled_day_of_month" jdbcType="INTEGER"/>
+        <result property="maintenanceType" column="maintenance_type" jdbcType="VARCHAR"/>
+        <result property="description" column="description" jdbcType="VARCHAR"/>
+        <result property="standardProcedures" column="standard_procedures" jdbcType="VARCHAR"/>
+        <result property="estimatedDurationHours" column="estimated_duration_hours" jdbcType="NUMERIC"/>
+        <result property="requiredMaterials" column="required_materials" jdbcType="VARCHAR"/>
+        <result property="isActive" column="is_active" jdbcType="INTEGER"/>
+        <result property="createdBy" column="created_by" jdbcType="VARCHAR"/>
+        <result property="createdAt" column="created_at" jdbcType="TIMESTAMP"/>
+        <result property="updatedAt" column="updated_at" jdbcType="TIMESTAMP"/>
+    </resultMap>
+
+    <!--查询单个-->
+    <select id="getByMoldId" resultMap="MaintenancePlansMap">
+        select id,
+               name,
+               mold_type_id,
+               specific_mold_id,
+               interval_hours,
+               scheduled_day_of_month,
+               maintenance_type,
+               description,
+               standard_procedures,
+               estimated_duration_hours,
+               required_materials,
+               is_active,
+               created_by,
+               created_at,
+               updated_at
+        from maintenance_plans
+        where specific_mold_id = #{moldId}
+    </select>
+
+
+    <!-- 带模具信息的 VO：maintenance_plans 关联 molds -->
+    <resultMap type="com.zjb.mjgl.pojo.vo.MaintenancePlanWithMoldVO"
+               id="MaintenancePlanWithMoldVOMap">
+        <result property="id" column="id" jdbcType="VARCHAR"/>
+        <result property="name" column="name" jdbcType="VARCHAR"/>
+        <result property="moldId" column="mold_id" jdbcType="VARCHAR"/>
+        <result property="moldName" column="mold_name" jdbcType="VARCHAR"/>
+        <result property="moldCategory" column="mold_category" jdbcType="VARCHAR"/>
+        <result property="intervalHours" column="interval_hours" jdbcType="INTEGER"/>
+        <result property="scheduledDayOfMonth" column="scheduled_day_of_month" jdbcType="INTEGER"/>
+        <result property="maintenanceType" column="maintenance_type" jdbcType="VARCHAR"/>
+        <result property="description" column="description" jdbcType="VARCHAR"/>
+        <result property="standardProcedures" column="standard_procedures" jdbcType="VARCHAR"/>
+        <result property="estimatedDurationHours" column="estimated_duration_hours" jdbcType="NUMERIC"/>
+        <result property="requiredMaterials" column="required_materials" jdbcType="VARCHAR"/>
+        <result property="isActive" column="is_active" jdbcType="INTEGER"/>
+        <result property="createdBy" column="created_by" jdbcType="VARCHAR"/>
+        <result property="createdByName" column="created_by_name" jdbcType="VARCHAR"/>
+        <result property="createdAt" column="created_at" jdbcType="TIMESTAMP"/>
+        <result property="updatedAt" column="updated_at" jdbcType="TIMESTAMP"/>
+    </resultMap>
+
+    <!-- 分页查询：直接连表 molds，返回 VO -->
+    <select id="query" resultMap="MaintenancePlanWithMoldVOMap">
+        select
+            p.id,
+            p.name,
+            p.specific_mold_id     as mold_id,
+            m.name                 as mold_name,
+            m.category             as mold_category,
+            p.interval_hours,
+            p.scheduled_day_of_month,
+            p.maintenance_type,
+            p.description,
+            p.standard_procedures,
+            p.estimated_duration_hours,
+            p.required_materials,
+            p.is_active,
+            p.created_by,
+            u.real_name          as created_by_name,
+            p.created_at,
+            p.updated_at
+        from maintenance_plans p
+                 left join molds m on p.specific_mold_id = m.id
+                 left join users u on p.created_by = u.id
+        <where>
+            <if test="keyword != null and keyword != ''">
+                and (
+                        p.name like concat('%', #{keyword}, '%')
+                        or p.description like concat('%', #{keyword}, '%')
+                    )
+            </if>
+
+            <!-- 内部使用：按模具ID精确筛选计划 -->
+            <if test="bindMoldId != null and bindMoldId != ''">
+                and p.specific_mold_id = #{bindMoldId}
+            </if>
+
+            <!-- 指定模具：按模具名称或编号模糊查询 -->
+            <if test="specificMoldId != null and specificMoldId != ''">
+                and (
+                        m.name like concat('%', #{specificMoldId}, '%')
+                        or m.mold_code like concat('%', #{specificMoldId}, '%')
+                    )
+            </if>
+
+            <if test="maintenanceType != null and maintenanceType != ''">
+                and p.maintenance_type = #{maintenanceType}
+            </if>
+
+            <if test="isActive != null">
+                and p.is_active = #{isActive}
+            </if>
+
+            <if test="createdBy != null and createdBy != ''">
+                and p.created_by = #{createdBy}
+            </if>
+
+            <if test="startCreatedAt != null">
+                and p.created_at &gt; #{startCreatedAt}
+            </if>
+            <if test="endCreatedAt != null">
+                and p.created_at &lt; #{endCreatedAt}
+            </if>
+        </where>
+    </select>
+</mapper>

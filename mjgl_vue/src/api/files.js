@@ -6,6 +6,7 @@ export const uploadBizFiles = (bizId, files, options = {}) => {
     bizType = 'mold',
     fileType = 'photo',
     description = '',
+    imageStatus = '',
   } = options
 
   const formData = new FormData()
@@ -17,6 +18,9 @@ export const uploadBizFiles = (bizId, files, options = {}) => {
   formData.append('fileType', fileType)
   if (description) {
     formData.append('description', description)
+  }
+   if (imageStatus) {
+    formData.append('imageStatus', imageStatus)
   }
 
   return request.post('/api/files/upload', formData, {
@@ -34,5 +38,15 @@ export const getFilePreviewUrl = (id) =>
 export const deleteFiles = (ids) =>
   request.delete('/api/files/delete', {
     data: ids,
+  })
+
+// 通用：根据业务类型 + 业务ID（可选文件类型）查询文件列表
+export const fetchBizFiles = (bizType, bizId, fileType) =>
+  request.get('/api/files/biz', {
+    params: {
+      bizType,
+      bizId,
+      fileType,
+    },
   })
 
