@@ -3,6 +3,7 @@ package com.zjb.mjgl.controller;
 
 import com.github.pagehelper.PageInfo;
 import com.zjb.mjgl.common.Result;
+import com.zjb.mjgl.pojo.dto.BatchIdsDTO;
 import com.zjb.mjgl.pojo.dto.MaintenancePlanQueryParam;
 import com.zjb.mjgl.pojo.entity.MaintenancePlans;
 import com.zjb.mjgl.pojo.vo.MaintenancePlanWithMoldVO;
@@ -38,6 +39,12 @@ public class MaintenancePlansController {
     public Result<?> deleteRecord(@PathVariable String id) {
         log.info("收到删除保养计划请求, id={}", id);
         return maintenancePlansService.deletePlan(id);
+    }
+
+    @PostMapping("/plan/batch-delete")
+    public Result<?> batchDeletePlans(@RequestBody BatchIdsDTO body) {
+        log.info("收到批量删除保养计划请求");
+        return maintenancePlansService.deletePlansBatch(body == null ? null : body.getIds());
     }
 
     @PutMapping("/edit")

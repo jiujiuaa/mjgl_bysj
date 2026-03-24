@@ -16,13 +16,23 @@
             <div class="card">
               <div class="card-header">
                 <h3 class="card-title">使用记录列表</h3>
-                <button
-                  class="primary-btn"
-                  type="button"
-                  @click="handleShowCreateDialog"
-                >
-                  新建记录
-                </button>
+                <div class="card-header-actions">
+                  <button
+                    type="button"
+                    class="secondary-btn delete-outline-btn"
+                    :disabled="useBatchDeleting || selectedIds.length === 0"
+                    @click="handleBatchDeleteRecords"
+                  >
+                    {{ useBatchDeleting ? '删除中...' : `批量删除 (${selectedIds.length})` }}
+                  </button>
+                  <button
+                    class="primary-btn"
+                    type="button"
+                    @click="handleShowCreateDialog"
+                  >
+                    新建记录
+                  </button>
+                </div>
               </div>
               <div class="card-body">
                 <div v-if="successMessage" class="success-message">
@@ -90,6 +100,14 @@
                     <table class="mold-table">
                       <thead>
                         <tr>
+                          <th class="select-col">
+                            <input
+                              type="checkbox"
+                              :checked="isAllPageSelected()"
+                              @change="toggleSelectAllPage($event.target.checked)"
+                              title="全选本页（当前筛选结果）"
+                            />
+                          </th>
                           <th>模具编号</th>
                           <th>模具名称</th>
                           <th>类别</th>
@@ -112,12 +130,19 @@
                       </thead>
                       <tbody>
                         <tr v-if="filteredRecords.length === 0">
-                          <td colspan="18" class="empty-cell">暂无使用记录</td>
+                          <td colspan="19" class="empty-cell">暂无使用记录</td>
                         </tr>
                         <tr
                           v-for="record in filteredRecords"
                           :key="record.id"
                         >
+                          <td class="select-col">
+                            <input
+                              type="checkbox"
+                              :checked="isSelected(record.id)"
+                              @change="toggleRow(record.id)"
+                            />
+                          </td>
                           <td>{{ record.moldCode }}</td>
                           <td>{{ record.moldName }}</td>
                           <td>{{ record.moldCategory || '-' }}</td>
@@ -652,6 +677,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import AppSidebar from '@/components/AppSidebar.vue'
 import HourDateTimePicker from '@/components/HourDateTimePicker.vue'
+import { useTableMultiSelect } from '@/composables/useTableMultiSelect'
 import {
   fetchAllUseRecords,
   fetchUseRecordsByMoldId,
@@ -660,6 +686,7 @@ import {
   createUseRecord,
   updateUseRecordStatus,
   deleteUseRecord,
+  batchDeleteUseRecords,
   approveUseRecord,
 } from '@/api/useRecords'
 import { fetchMolds } from '@/api/molds'
@@ -768,6 +795,10 @@ const filteredRecords = computed(() => {
     return true
   })
 })
+
+const useBatchDeleting = ref(false)
+const { selectedIds, isSelected, toggleRow, isAllPageSelected, toggleSelectAllPage, clearSelection } =
+  useTableMultiSelect(() => filteredRecords.value)
 
 const loadRecords = async () => {
   listLoading.value = true
@@ -1086,6 +1117,7 @@ const handleDeleteRecord = async (record) => {
   try {
     await deleteUseRecord(record.id)
     successMessage.value = '删除使用记录成功'
+    clearSelection()
     await loadRecords()
     setTimeout(() => {
       successMessage.value = ''
@@ -1094,6 +1126,28 @@ const handleDeleteRecord = async (record) => {
     errorMessage.value = e.message || '删除使用记录失败'
   } finally {
     rowLoadingId.value = ''
+  }
+}
+
+const handleBatchDeleteRecords = async () => {
+  const ids = [...selectedIds.value]
+  if (!ids.length) return
+  const ok = window.confirm(`确定批量删除选中的 ${ids.length} 条使用记录吗？此操作不可恢复！`)
+  if (!ok) return
+  useBatchDeleting.value = true
+  errorMessage.value = ''
+  try {
+    await batchDeleteUseRecords(ids)
+    successMessage.value = '批量删除成功'
+    clearSelection()
+    await loadRecords()
+    setTimeout(() => {
+      successMessage.value = ''
+    }, 3000)
+  } catch (e) {
+    errorMessage.value = e.message || '批量删除失败'
+  } finally {
+    useBatchDeleting.value = false
   }
 }
 
@@ -1356,6 +1410,22 @@ onMounted(() => {
   font-weight: 600;
   color: #1f2937;
   margin: 0;
+}
+
+.card-header-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.delete-outline-btn {
+  color: #b91c1c;
+  border-color: #fecaca;
+}
+
+.select-col {
+  width: 40px;
+  text-align: center;
 }
 
 .card-body {

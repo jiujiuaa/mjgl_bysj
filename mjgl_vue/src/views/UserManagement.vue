@@ -20,10 +20,20 @@
             <div class="card user-list-card">
               <div class="card-header">
                 <h3 class="card-title">用户列表</h3>
-                <button @click="handleShowAddDialog" class="add-user-btn">
-                  <span class="btn-icon">+</span>
-                  添加用户
-                </button>
+                <div class="header-actions-wrap">
+                  <button
+                    type="button"
+                    class="batch-delete-btn"
+                    :disabled="usersBatchDeleting || selectedIds.length === 0"
+                    @click="handleBatchDeleteUsers"
+                  >
+                    {{ usersBatchDeleting ? '删除中...' : `批量删除 (${selectedIds.length})` }}
+                  </button>
+                  <button @click="handleShowAddDialog" class="add-user-btn">
+                    <span class="btn-icon">+</span>
+                    添加用户
+                  </button>
+                </div>
               </div>
               <div class="card-body">
                 <!-- 查询过滤器 -->
@@ -82,6 +92,14 @@
                   <table class="user-table">
                     <thead>
                       <tr>
+                        <th class="select-col">
+                          <input
+                            type="checkbox"
+                            :checked="isAllPageSelected()"
+                            @change="toggleSelectAllPage($event.target.checked)"
+                            title="全选本页"
+                          />
+                        </th>
                         <th>用户名</th>
                         <th>真实姓名</th>
                         <th>角色</th>
@@ -94,9 +112,17 @@
                     </thead>
                     <tbody>
                       <tr v-if="!authStore.users || authStore.users.length === 0">
-                        <td colspan="8" class="empty-cell">暂无用户数据</td>
+                        <td colspan="9" class="empty-cell">暂无用户数据</td>
                       </tr>
                       <tr v-for="user in authStore.users" :key="user.id || user.username">
+                        <td class="select-col">
+                          <input
+                            v-if="user.id"
+                            type="checkbox"
+                            :checked="isSelected(user.id)"
+                            @change="toggleRow(user.id)"
+                          />
+                        </td>
                         <td>{{ user.username }}</td>
                         <td>{{ user.realName }}</td>
                         <td>{{ formatRole(user.role) }}</td>
@@ -373,9 +399,13 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import AppSidebar from '@/components/AppSidebar.vue'
+import { useTableMultiSelect } from '@/composables/useTableMultiSelect'
 
 const router = useRouter()
 const authStore = useAuthStore()
+const { selectedIds, isSelected, toggleRow, isAllPageSelected, toggleSelectAllPage, clearSelection } =
+  useTableMultiSelect(() => authStore.users || [])
+const usersBatchDeleting = ref(false)
 
 // 表单数据，对应后端 RegisterDTO
 const userForm = ref({
@@ -683,6 +713,7 @@ const handleDeleteUser = async (user) => {
         const result = await authStore.removeUser(user.id)
         if (result.success) {
           successMessage.value = result.message || '删除用户成功'
+          clearSelection()
           // 如果处于查询模式，重新执行查询；否则加载全部用户
           if (isQueryMode.value) {
             await handleQueryUsers()
@@ -699,6 +730,45 @@ const handleDeleteUser = async (user) => {
         errorMessage.value = error.message || '删除用户失败'
       }
     }
+  }
+  showConfirmDialog.value = true
+}
+
+const handleBatchDeleteUsers = () => {
+  const ids = [...selectedIds.value]
+  if (!ids.length) return
+  confirmConfig.value = {
+    title: '批量删除用户',
+    message: `确定要删除选中的 ${ids.length} 个用户吗？此操作不可恢复！`,
+    type: 'danger',
+    confirmText: '删除',
+    cancelText: '取消',
+    onConfirm: async () => {
+      errorMessage.value = ''
+      successMessage.value = ''
+      usersBatchDeleting.value = true
+      try {
+        const result = await authStore.removeUsersBatch(ids)
+        if (result.success) {
+          successMessage.value = result.message || '批量删除用户成功'
+          clearSelection()
+          if (isQueryMode.value) {
+            await handleQueryUsers()
+          } else {
+            await handleLoadAllUsers()
+          }
+          setTimeout(() => {
+            successMessage.value = ''
+          }, 3000)
+        } else {
+          errorMessage.value = result.message || '批量删除用户失败'
+        }
+      } catch (error) {
+        errorMessage.value = error.message || '批量删除用户失败'
+      } finally {
+        usersBatchDeleting.value = false
+      }
+    },
   }
   showConfirmDialog.value = true
 }
@@ -911,6 +981,36 @@ const formatDate = (dateStr) => {
   font-weight: 600;
   color: #1f2937;
   margin: 0;
+}
+
+.header-actions-wrap {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.batch-delete-btn {
+  padding: 10px 16px;
+  background: #fef2f2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+  border-radius: 6px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.batch-delete-btn:hover:not(:disabled) {
+  background: #fee2e2;
+}
+
+.batch-delete-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.select-col {
+  width: 40px;
+  text-align: center;
 }
 
 .add-user-btn {

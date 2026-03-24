@@ -2,6 +2,13 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
 <mapper namespace="com.zjb.mjgl.mapper.MoldsMapper">
 
+    <resultMap id="moldMetaMap" type="com.zjb.mjgl.pojo.vo.MoldMetaVO">
+        <id column="id" property="id"/>
+        <result column="mold_code" property="moldCode"/>
+        <result column="name" property="name"/>
+        <result column="current_status" property="currentStatus"/>
+    </resultMap>
+
     <insert id="insertMold" parameterType="com.zjb.mjgl.pojo.entity.Molds">
         INSERT INTO molds (
             id,
@@ -259,6 +266,17 @@
                updated_at
         FROM molds
         WHERE id = #{id}
+    </select>
+
+    <!-- 健康评估：只取基础字段，避免嵌套查询造成性能问题 -->
+    <select id="listMeta" resultMap="moldMetaMap">
+        SELECT
+            id,
+            mold_code,
+            name,
+            current_status
+        FROM molds
+        ORDER BY updated_at DESC, id
     </select>
 </mapper>
 

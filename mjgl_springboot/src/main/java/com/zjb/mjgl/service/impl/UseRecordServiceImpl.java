@@ -5,6 +5,7 @@ import com.zjb.mjgl.common.enums.MoldStatusEnum;
 import com.zjb.mjgl.common.enums.RoleEnum;
 import com.zjb.mjgl.mapper.MoldsMapper;
 import com.zjb.mjgl.mapper.UseRecordMapper;
+import com.zjb.mjgl.pojo.dto.BatchIdsDTO;
 import com.zjb.mjgl.pojo.dto.MoldUsageRecordDTO;
 import com.zjb.mjgl.pojo.entity.MoldAlertMessage;
 import com.zjb.mjgl.pojo.entity.MoldUsageRecords;
@@ -222,6 +223,19 @@ public class UseRecordServiceImpl implements UseRecordService {
                     return Result.success();
                 })
                 .orElseGet(() -> Result.fail("使用记录不存在"));
+    }
+
+    @Override
+    public Result<?> deleteRecordsBatch(List<String> rawIds) {
+        List<String> ids = BatchIdsDTO.normalizeList(rawIds);
+        if (ids.isEmpty()) {
+            return Result.fail("请选择要删除的使用记录");
+        }
+        return ids.stream()
+                .map(this::deleteRecord)
+                .filter(r -> r.getCode() != 200)
+                .findFirst()
+                .orElseGet(Result::success);
     }
 
     @Override

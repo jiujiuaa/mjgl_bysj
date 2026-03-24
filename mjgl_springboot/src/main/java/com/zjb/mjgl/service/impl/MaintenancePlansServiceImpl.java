@@ -6,6 +6,7 @@ import com.zjb.mjgl.common.Result;
 import com.zjb.mjgl.mapper.MaintenancePlanMapper;
 import com.zjb.mjgl.mapper.MaintenanceReminderMapper;
 import com.zjb.mjgl.mapper.MoldsMapper;
+import com.zjb.mjgl.pojo.dto.BatchIdsDTO;
 import com.zjb.mjgl.pojo.dto.MaintenancePlanQueryParam;
 import com.zjb.mjgl.pojo.entity.MaintenanceReminder;
 import com.zjb.mjgl.pojo.entity.Molds;
@@ -111,6 +112,19 @@ public class MaintenancePlansServiceImpl implements MaintenancePlansService {
        }
         log.warn("删除保养计划失败, id={}", id);
         return Result.fail("删除失败");
+    }
+
+    @Override
+    public Result<?> deletePlansBatch(List<String> rawIds) {
+        List<String> ids = BatchIdsDTO.normalizeList(rawIds);
+        if (ids.isEmpty()) {
+            return Result.fail("请选择要删除的保养计划");
+        }
+        return ids.stream()
+                .map(this::deletePlan)
+                .filter(r -> r.getCode() != 200)
+                .findFirst()
+                .orElseGet(Result::success);
     }
 
     @Override

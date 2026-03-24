@@ -4,6 +4,7 @@ import com.zjb.mjgl.common.Result;
 import com.zjb.mjgl.common.enums.RoleEnum;
 import com.zjb.mjgl.common.enums.UserStatusEnum;
 import com.zjb.mjgl.mapper.UserMapper;
+import com.zjb.mjgl.pojo.dto.BatchIdsDTO;
 import com.zjb.mjgl.pojo.dto.RegisterDTO;
 import com.zjb.mjgl.pojo.dto.UserQueryDTO;
 import com.zjb.mjgl.pojo.entity.User;
@@ -143,6 +144,19 @@ public class UserServiceImpl implements UserService {
             return Result.success("删除用户成功");
         }
         return Result.fail("删除用户失败");
+    }
+
+    @Override
+    public Result<String> deleteUsersBatch(List<String> rawIds) {
+        List<String> ids = BatchIdsDTO.normalizeList(rawIds);
+        if (ids.isEmpty()) {
+            return Result.fail("请选择要删除的用户");
+        }
+        return ids.stream()
+                .map(this::deleteUser)
+                .filter(r -> r.getCode() != 200)
+                .findFirst()
+                .orElseGet(() -> Result.success("已删除 " + ids.size() + " 个用户"));
     }
 
     @Override

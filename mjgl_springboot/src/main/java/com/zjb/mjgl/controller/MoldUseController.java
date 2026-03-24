@@ -1,6 +1,7 @@
 package com.zjb.mjgl.controller;
 
 import com.zjb.mjgl.common.Result;
+import com.zjb.mjgl.pojo.dto.BatchIdsDTO;
 import com.zjb.mjgl.pojo.dto.MoldUsageRecordDTO;
 import com.zjb.mjgl.service.UseRecordService;
 import lombok.extern.slf4j.Slf4j;
@@ -78,6 +79,11 @@ public class MoldUseController {
     @DeleteMapping("/record/{id}")
     public Result<?> deleteRecord(@PathVariable String id) {
         return useRecordService.deleteRecord(id);
+    }
+
+    @PostMapping("/record/batch-delete")
+    public Result<?> batchDeleteRecords(@RequestBody BatchIdsDTO body) {
+        return useRecordService.deleteRecordsBatch(body == null ? null : body.getIds());
     }
 
     @PutMapping("/updateRecord")

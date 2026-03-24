@@ -16,10 +16,20 @@
             <div class="card">
               <div class="card-header">
                 <h3 class="card-title">保养计划列表</h3>
-                <button class="primary-btn" type="button" @click="handleShowCreateDialog">
-                  <span class="btn-icon">+</span>
-                  新建计划
-                </button>
+                <div class="card-header-actions">
+                  <button
+                    type="button"
+                    class="secondary-btn delete-outline-btn"
+                    :disabled="plansBatchDeleting || selectedIds.length === 0"
+                    @click="handleBatchDelete"
+                  >
+                    {{ plansBatchDeleting ? '删除中...' : `批量删除 (${selectedIds.length})` }}
+                  </button>
+                  <button class="primary-btn" type="button" @click="handleShowCreateDialog">
+                    <span class="btn-icon">+</span>
+                    新建计划
+                  </button>
+                </div>
               </div>
               <div class="card-body">
                 <div v-if="successMessage" class="success-message">
@@ -121,6 +131,14 @@
                     <table class="mold-table">
                       <thead>
                         <tr>
+                          <th class="select-col">
+                            <input
+                              type="checkbox"
+                              :checked="isAllPageSelected()"
+                              @change="toggleSelectAllPage($event.target.checked)"
+                              title="全选本页"
+                            />
+                          </th>
                           <th>计划名称</th>
                           <th>模具类型</th>
                           <th>指定模具</th>
@@ -136,9 +154,16 @@
                       </thead>
                       <tbody>
                         <tr v-if="!page.list || page.list.length === 0">
-                          <td colspan="11" class="empty-cell">暂无保养计划</td>
+                          <td colspan="12" class="empty-cell">暂无保养计划</td>
                         </tr>
                         <tr v-for="plan in page.list" :key="plan.id">
+                          <td class="select-col">
+                            <input
+                              type="checkbox"
+                              :checked="isSelected(plan.id)"
+                              @change="toggleRow(plan.id)"
+                            />
+                          </td>
                           <td>{{ plan.name }}</td>
                           <td>{{ plan.moldCategory || '-' }}</td>
                           <td>{{ plan.moldName || '-' }}</td>
@@ -388,11 +413,13 @@ import { onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import AppSidebar from '@/components/AppSidebar.vue'
+import { useTableMultiSelect } from '@/composables/useTableMultiSelect'
 import {
   queryMaintenancePlans,
   createMaintenancePlan,
   updateMaintenancePlan,
   deleteMaintenancePlan,
+  batchDeleteMaintenancePlans,
   enableMaintenancePlan,
   disableMaintenancePlan,
 } from '@/api/maintenancePlans'
@@ -415,6 +442,10 @@ const page = reactive({
   total: 0,
   pages: 0,
 })
+
+const plansBatchDeleting = ref(false)
+const { selectedIds, isSelected, toggleRow, isAllPageSelected, toggleSelectAllPage, clearSelection } =
+  useTableMultiSelect(() => page.list)
 
 const query = reactive({
   moldId: '',
@@ -623,12 +654,35 @@ const handleDelete = async (plan) => {
   try {
     await deleteMaintenancePlan(plan.id)
     successMessage.value = '删除保养计划成功'
+    clearSelection()
     await loadPlans()
     setTimeout(() => {
       successMessage.value = ''
     }, 3000)
   } catch (e) {
     errorMessage.value = e.message || '删除保养计划失败'
+  }
+}
+
+const handleBatchDelete = async () => {
+  const ids = [...selectedIds.value]
+  if (!ids.length) return
+  const ok = window.confirm(`确定批量删除选中的 ${ids.length} 个保养计划吗？此操作不可恢复！`)
+  if (!ok) return
+  plansBatchDeleting.value = true
+  errorMessage.value = ''
+  try {
+    await batchDeleteMaintenancePlans(ids)
+    successMessage.value = '批量删除成功'
+    clearSelection()
+    await loadPlans()
+    setTimeout(() => {
+      successMessage.value = ''
+    }, 3000)
+  } catch (e) {
+    errorMessage.value = e.message || '批量删除失败'
+  } finally {
+    plansBatchDeleting.value = false
   }
 }
 
@@ -882,6 +936,22 @@ onMounted(() => {
   font-weight: 600;
   color: #1f2937;
   margin: 0;
+}
+
+.card-header-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.delete-outline-btn {
+  color: #b91c1c;
+  border-color: #fecaca;
+}
+
+.select-col {
+  width: 40px;
+  text-align: center;
 }
 
 .card-body {

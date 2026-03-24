@@ -14,9 +14,19 @@
             <div class="card">
               <div class="card-header">
                 <h3 class="card-title">异常记录列表</h3>
-                <button type="button" class="primary-btn" @click="openCreateModal">
-                  新建异常记录
-                </button>
+                <div class="card-header-actions">
+                  <button
+                    type="button"
+                    class="secondary-btn delete-outline-btn"
+                    :disabled="abnormalBatchDeleting || selectedIds.length === 0"
+                    @click="handleBatchDelete"
+                  >
+                    {{ abnormalBatchDeleting ? '删除中...' : `批量删除 (${selectedIds.length})` }}
+                  </button>
+                  <button type="button" class="primary-btn" @click="openCreateModal">
+                    新建异常记录
+                  </button>
+                </div>
               </div>
               <div class="card-body">
                 <div class="query-form">
@@ -106,6 +116,14 @@
                     <table class="mold-table">
                       <thead>
                         <tr>
+                          <th class="select-col">
+                            <input
+                              type="checkbox"
+                              :checked="isAllPageSelected()"
+                              @change="toggleSelectAllPage($event.target.checked)"
+                              title="全选本页"
+                            />
+                          </th>
                           <th>模具编号</th>
                           <th>模具名称</th>
                           <th>异常类型</th>
@@ -121,9 +139,16 @@
                       </thead>
                       <tbody>
                         <tr v-if="!page.list || page.list.length === 0">
-                          <td colspan="11" class="empty-cell">暂无异常记录</td>
+                          <td colspan="12" class="empty-cell">暂无异常记录</td>
                         </tr>
                         <tr v-for="item in page.list" :key="item.id">
+                          <td class="select-col">
+                            <input
+                              type="checkbox"
+                              :checked="isSelected(item.id)"
+                              @change="toggleRow(item.id)"
+                            />
+                          </td>
                           <td>{{ item.moldCode || '-' }}</td>
                           <td>{{ item.moldName || '-' }}</td>
                           <td>{{ renderAbnormalType(item.abnormalType) }}</td>
@@ -325,7 +350,8 @@
 import { reactive, ref, onMounted, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import AppSidebar from '@/components/AppSidebar.vue'
-import { queryAbnormalRecords, deleteAbnormalRecord } from '@/api/abnormalRecords'
+import { useTableMultiSelect } from '@/composables/useTableMultiSelect'
+import { queryAbnormalRecords, deleteAbnormalRecord, batchDeleteAbnormalRecords } from '@/api/abnormalRecords'
 import { createManualAbnormal } from '@/api/monitoringLogs'
 import { fetchMolds } from '@/api/molds'
 import { uploadBizFiles } from '@/api/files'
@@ -357,6 +383,10 @@ const page = reactive({
   total: 0,
   pages: 0,
 })
+
+const abnormalBatchDeleting = ref(false)
+const { selectedIds, isSelected, toggleRow, isAllPageSelected, toggleSelectAllPage, clearSelection } =
+  useTableMultiSelect(() => page.list)
 
 const molds = ref([])
 const selectedFiles = ref([])
@@ -405,7 +435,7 @@ const loadList = async () => {
     page.pages = data.pages ?? 0
   } catch (e) {
     errorMessage.value = e.message || '加载异常记录失败'
-    // eslint-disable-next-line no-console
+     
     console.error(e)
   } finally {
     listLoading.value = false
@@ -474,11 +504,29 @@ const handleDelete = async (item) => {
   }
   try {
     await deleteAbnormalRecord(item.id)
+    clearSelection()
     loadList()
   } catch (e) {
-    // eslint-disable-next-line no-console
+     
     console.error(e)
     alert(e.message || '删除失败')
+  }
+}
+
+const handleBatchDelete = async () => {
+  const ids = [...selectedIds.value]
+  if (!ids.length) return
+  if (!window.confirm(`确认批量删除选中的 ${ids.length} 条异常记录？`)) return
+  abnormalBatchDeleting.value = true
+  try {
+    await batchDeleteAbnormalRecords(ids)
+    clearSelection()
+    loadList()
+  } catch (e) {
+    console.error(e)
+    alert(e.message || '批量删除失败')
+  } finally {
+    abnormalBatchDeleting.value = false
   }
 }
 
@@ -576,7 +624,7 @@ const handleCreate = async () => {
     showCreateModal.value = false
     loadList()
   } catch (e) {
-    // eslint-disable-next-line no-console
+     
     console.error(e)
     createErrorMessage.value = e.message || '保存异常记录失败'
   }
@@ -590,7 +638,7 @@ onMounted(async () => {
     const res = await fetchMolds(1, 1000)
     molds.value = res.data?.list ?? []
   } catch (e) {
-    // eslint-disable-next-line no-console
+     
     console.error(e)
   }
   if (authStore.isAdmin) {
@@ -663,6 +711,22 @@ onMounted(async () => {
   font-weight: 600;
   color: #1f2937;
   margin: 0;
+}
+
+.card-header-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.delete-outline-btn {
+  color: #b91c1c;
+  border-color: #fecaca;
+}
+
+.select-col {
+  width: 40px;
+  text-align: center;
 }
 
 .card-body {

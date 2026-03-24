@@ -53,6 +53,10 @@ export const deleteUser = (id) => {
   return request.delete(`/api/auth/user/${id}`)
 }
 
+/** 批量删除用户（管理员） */
+export const batchDeleteUsers = (ids) =>
+  request.post('/api/auth/user/batch-delete', { ids: ids || [] })
+
 /**
  * 更新用户状态（启用/禁用）（需要管理员权限）
  * @param {String} id - 用户ID

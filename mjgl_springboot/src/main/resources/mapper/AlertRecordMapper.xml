@@ -100,4 +100,9 @@
         </where>
         ORDER BY a.created_at DESC
     </select>
+
+    <delete id="deleteByMoldId">
+        DELETE FROM alerts
+        WHERE mold_id = #{moldId}
+    </delete>
 </mapper>

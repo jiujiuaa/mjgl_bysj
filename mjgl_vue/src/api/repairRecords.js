@@ -22,6 +22,10 @@ export const updateRepairRecord = (data) =>
 export const deleteRepairRecord = (id) =>
   request.delete(`/api/repair/record/${id}`)
 
+// 批量删除维修记录
+export const batchDeleteRepairRecords = (ids) =>
+  request.post('/api/repair/record/batch-delete', { ids: ids || [] })
+
 // 维修记录合理性审批（仅 ADMIN）
 export const approveRepairRecord = (id, data) =>
   request.post(`/api/repair/record/${id}/approval`, data)

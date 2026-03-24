@@ -2,6 +2,7 @@ package com.zjb.mjgl.controller;
 
 import com.github.pagehelper.PageInfo;
 import com.zjb.mjgl.common.Result;
+import com.zjb.mjgl.pojo.dto.BatchIdsDTO;
 import com.zjb.mjgl.pojo.dto.MoldAbnormalRecordQueryParam;
 import com.zjb.mjgl.pojo.entity.MoldAbnormalRecord;
 import com.zjb.mjgl.pojo.vo.MoldAbnormalRecordVO;
@@ -79,6 +80,11 @@ public class MoldAbnormalRecordController {
     @DeleteMapping("/delete/{id}")
     public Result<?> delete(@PathVariable String id) {
         return moldAbnormalRecordService.delete(id);
+    }
+
+    @PostMapping("/batch-delete")
+    public Result<?> batchDelete(@RequestBody BatchIdsDTO body) {
+        return moldAbnormalRecordService.deleteBatch(body == null ? null : body.getIds());
     }
 }
 

@@ -2,6 +2,7 @@ package com.zjb.mjgl.controller;
 
 import com.zjb.mjgl.common.Result;
 import com.zjb.mjgl.pojo.dto.AlertRuleSaveParam;
+import com.zjb.mjgl.pojo.dto.BatchIdsDTO;
 import com.zjb.mjgl.pojo.vo.AlertRuleVO;
 import com.zjb.mjgl.service.AlertRuleService;
 import lombok.RequiredArgsConstructor;
@@ -39,6 +40,16 @@ public class AlertRuleController {
     public Result<Void> delete(@PathVariable String id) {
         alertRuleService.deleteById(id);
         return Result.success();
+    }
+
+    @PostMapping("/batch-delete")
+    public Result<Void> batchDelete(@RequestBody BatchIdsDTO body) {
+        try {
+            alertRuleService.deleteByIds(body == null ? null : body.getIds());
+            return Result.success();
+        } catch (IllegalArgumentException e) {
+            return Result.fail(e.getMessage());
+        }
     }
 
     @PutMapping("/{id}/enabled")

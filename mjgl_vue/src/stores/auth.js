@@ -7,6 +7,7 @@ import {
   logoutApi,
   updateUser as updateUserApi,
   deleteUser as deleteUserApi,
+  batchDeleteUsers as batchDeleteUsersApi,
   updateUserStatus as updateUserStatusApi,
   queryUsers as queryUsersApi
 } from '@/api/auth'
@@ -129,6 +130,18 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  const removeUsersBatch = async (ids) => {
+    try {
+      const response = await batchDeleteUsersApi(ids)
+      if (response.code === 200) {
+        return { success: true, message: response.message || response.data || '批量删除成功' }
+      }
+      return { success: false, message: response.message || '批量删除用户失败' }
+    } catch (error) {
+      return { success: false, message: error.message || '批量删除用户失败' }
+    }
+  }
+
   // 更新用户状态（管理员功能）
   const changeUserStatus = async (id, status) => {
     try {
@@ -170,6 +183,7 @@ export const useAuthStore = defineStore('auth', () => {
     loadUsers,
     updateUser,
     removeUser,
+    removeUsersBatch,
     changeUserStatus,
     searchUsers,
   }

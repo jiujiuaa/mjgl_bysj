@@ -22,6 +22,10 @@ export const updateMaintenancePlan = (data) =>
 export const deleteMaintenancePlan = (id) =>
   request.delete(`/api/maintenanceplan/plan/${id}`)
 
+// 批量删除保养计划
+export const batchDeleteMaintenancePlans = (ids) =>
+  request.post('/api/maintenanceplan/plan/batch-delete', { ids: ids || [] })
+
 // 启用保养计划
 export const enableMaintenancePlan = (id) =>
   request.put(`/api/maintenanceplan/enable/${id}`)

@@ -201,4 +201,36 @@
             </if>
         </where>
     </select>
+
+    <!-- 健康评估：批量取保养计划模板 -->
+    <select id="listByMoldIds" resultMap="MaintenancePlansMap">
+        SELECT
+            id,
+            name,
+            mold_type_id,
+            specific_mold_id,
+            interval_hours,
+            scheduled_day_of_month,
+            maintenance_type,
+            description,
+            standard_procedures,
+            estimated_duration_hours,
+            required_materials,
+            is_active,
+            created_by,
+            created_at,
+            updated_at
+        FROM maintenance_plans
+        <where>
+            <if test="moldIds != null and moldIds.size() > 0">
+                specific_mold_id IN
+                <foreach collection="moldIds" item="moldId" open="(" separator="," close=")">
+                    #{moldId}
+                </foreach>
+            </if>
+            <if test="moldIds == null or moldIds.size() == 0">
+                1=0
+            </if>
+        </where>
+    </select>
 </mapper>

@@ -24,3 +24,7 @@ export const updateMold = (data) =>
 export const deleteMold = (id) =>
   request.delete(`/api/molds/${id}`)
 
+// 批量删除模具
+export const batchDeleteMolds = (ids) =>
+  request.post('/api/molds/batch-delete', { ids: ids || [] })
+

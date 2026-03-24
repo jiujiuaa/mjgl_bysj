@@ -15,6 +15,8 @@ public interface UserService {
     Result<List<UserVO>> getAllUsers();
     Result<String> updateUser(String id, RegisterDTO updateDTO);
     Result<String> deleteUser(String id);
+
+    Result<String> deleteUsersBatch(List<String> ids);
     Result<String> updateUserStatus(String id, String status);
     Result<List<UserVO>> queryUsers(UserQueryDTO queryDTO);
 }

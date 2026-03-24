@@ -6,6 +6,7 @@ import com.zjb.mjgl.common.Result;
 import com.zjb.mjgl.common.enums.RoleEnum;
 import com.zjb.mjgl.mapper.MaintenanceLogMapper;
 import com.zjb.mjgl.mapper.MaintenanceReminderMapper;
+import com.zjb.mjgl.pojo.dto.BatchIdsDTO;
 import com.zjb.mjgl.pojo.dto.MaintenanceLogQueryParam;
 import com.zjb.mjgl.pojo.entity.MaintenanceLogs;
 import com.zjb.mjgl.pojo.entity.MoldAlertMessage;
@@ -191,6 +192,19 @@ public class MaintenanceLogServiceImpl implements MaintenanceLogService {
         log.info("删除保养记录, id={}", id);
         maintenanceLogMapper.deleteById(id);
         return Result.success();
+    }
+
+    @Override
+    public Result<?> deleteBatch(List<String> rawIds) {
+        List<String> ids = BatchIdsDTO.normalizeList(rawIds);
+        if (ids.isEmpty()) {
+            return Result.fail("请选择要删除的保养记录");
+        }
+        return ids.stream()
+                .map(this::delete)
+                .filter(r -> r.getCode() != 200)
+                .findFirst()
+                .orElseGet(() -> Result.success());
     }
 
     @Override

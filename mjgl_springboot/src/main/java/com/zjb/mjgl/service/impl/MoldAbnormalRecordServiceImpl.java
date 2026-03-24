@@ -4,6 +4,7 @@ import com.github.pagehelper.PageHelper;
 import com.github.pagehelper.PageInfo;
 import com.zjb.mjgl.common.Result;
 import com.zjb.mjgl.mapper.MoldAbnormalRecordMapper;
+import com.zjb.mjgl.pojo.dto.BatchIdsDTO;
 import com.zjb.mjgl.pojo.dto.MoldAbnormalRecordQueryParam;
 import com.zjb.mjgl.pojo.entity.MoldAbnormalRecord;
 import com.zjb.mjgl.pojo.entity.MoldAlertMessage;
@@ -18,6 +19,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.Date;
+import java.util.List;
 import java.util.Optional;
 
 @Slf4j
@@ -102,6 +104,19 @@ public class MoldAbnormalRecordServiceImpl implements MoldAbnormalRecordService 
         }
         int rows = moldAbnormalRecordMapper.deleteById(id);
         return rows > 0 ? Result.success() : Result.fail("删除异常记录失败");
+    }
+
+    @Override
+    public Result<?> deleteBatch(List<String> rawIds) {
+        List<String> ids = BatchIdsDTO.normalizeList(rawIds);
+        if (ids.isEmpty()) {
+            return Result.fail("请选择要删除的异常记录");
+        }
+        return ids.stream()
+                .map(this::delete)
+                .filter(r -> r.getCode() != 200)
+                .findFirst()
+                .orElseGet(Result::success);
     }
 }
 

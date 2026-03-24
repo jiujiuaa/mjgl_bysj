@@ -2,6 +2,7 @@ package com.zjb.mjgl.controller;
 
 import com.github.pagehelper.PageInfo;
 import com.zjb.mjgl.common.Result;
+import com.zjb.mjgl.pojo.dto.BatchIdsDTO;
 import com.zjb.mjgl.pojo.dto.MoldParam;
 import com.zjb.mjgl.pojo.dto.MoldQueryParam;
 import com.zjb.mjgl.pojo.vo.MoldDetailVO;
@@ -9,6 +10,8 @@ import com.zjb.mjgl.service.MoldService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @Slf4j
 @RestController
@@ -40,6 +43,17 @@ public class MoldController {
             moldService.deteleMold(id);
         return Result.success(id);
     }
+
+    @PostMapping("/batch-delete")
+    public Result<Void> batchDelete(@RequestBody BatchIdsDTO body) {
+        List<String> ids = BatchIdsDTO.normalizeList(body == null ? null : body.getIds());
+        if (ids.isEmpty()) {
+            return Result.fail("请选择要删除的模具");
+        }
+        moldService.deleteMoldsBatch(ids);
+        return Result.success();
+    }
+
     /**
      * 分页查询所有模具（主表 + specs + 一个 qrcode + files）
      * 参数：pageNum 页码（从 1 开始），pageSize 每页条数

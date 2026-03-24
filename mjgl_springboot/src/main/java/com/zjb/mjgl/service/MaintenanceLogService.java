@@ -6,6 +6,8 @@ import com.zjb.mjgl.pojo.dto.MaintenanceLogQueryParam;
 import com.zjb.mjgl.pojo.entity.MaintenanceLogs;
 import com.zjb.mjgl.pojo.vo.MaintenanceLogVO;
 
+import java.util.List;
+
 public interface MaintenanceLogService {
     /**
      * 创建保养记录，返回新记录ID
@@ -22,6 +24,8 @@ public interface MaintenanceLogService {
     PageInfo<MaintenanceLogVO> queryByCondition(MaintenanceLogQueryParam param, int pageNum, int pageSize);
 
     Result<?> delete(String id);
+
+    Result<?> deleteBatch(List<String> ids);
 
     Result<?> update(MaintenanceLogs maintenanceLogs);
 

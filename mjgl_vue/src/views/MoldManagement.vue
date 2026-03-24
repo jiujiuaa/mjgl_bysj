@@ -18,10 +18,21 @@
             <div class="card mold-list-card">
               <div class="card-header">
                 <h3 class="card-title">模具列表</h3>
-                <button @click="handleShowAddDialog" class="primary-btn">
-                  <span class="btn-icon">+</span>
-                  新建模具
-                </button>
+                <div class="card-header-actions">
+                  <button
+                    v-if="authStore.isAdmin"
+                    type="button"
+                    class="secondary-btn delete-outline-btn"
+                    :disabled="moldsBatchDeleting || selectedIds.length === 0"
+                    @click="handleBatchDeleteMolds"
+                  >
+                    {{ moldsBatchDeleting ? '删除中...' : `批量删除 (${selectedIds.length})` }}
+                  </button>
+                  <button @click="handleShowAddDialog" class="primary-btn">
+                    <span class="btn-icon">+</span>
+                    新建模具
+                  </button>
+                </div>
               </div>
               <div class="card-body">
                 <div v-if="successMessage" class="success-message">
@@ -119,6 +130,14 @@
                   <table class="mold-table">
                     <thead>
                       <tr>
+                        <th v-if="authStore.isAdmin" class="select-col">
+                          <input
+                            type="checkbox"
+                            :checked="isAllPageSelected()"
+                            @change="toggleSelectAllPage($event.target.checked)"
+                            title="全选本页"
+                          />
+                        </th>
                         <th>模具编号</th>
                         <th>名称/型号</th>
                         <th>类别</th>
@@ -136,9 +155,16 @@
                     </thead>
                     <tbody>
                       <tr v-if="!moldPage.list || moldPage.list.length === 0">
-                        <td colspan="14" class="empty-cell">暂无模具数据</td>
+                        <td :colspan="authStore.isAdmin ? 14 : 10" class="empty-cell">暂无模具数据</td>
                       </tr>
                       <tr v-for="item in moldPage.list" :key="item.id">
+                        <td v-if="authStore.isAdmin" class="select-col">
+                          <input
+                            type="checkbox"
+                            :checked="isSelected(item.id)"
+                            @change="toggleRow(item.id)"
+                          />
+                        </td>
                         <td>{{ item.moldCode }}</td>
                         <td>{{ item.name }}</td>
                         <td>{{ item.category || '-' }}</td>
@@ -852,8 +878,9 @@ import { ref, reactive, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useMoldOptions } from '@/composables/useMoldOptions'
+import { useTableMultiSelect } from '@/composables/useTableMultiSelect'
 import AppSidebar from '@/components/AppSidebar.vue'
-import { fetchMolds, queryMolds, createMold, updateMold, deleteMold } from '@/api/molds'
+import { fetchMolds, queryMolds, createMold, updateMold, deleteMold, batchDeleteMolds } from '@/api/molds'
 
 const { moldOptions: moldOptionsForFilter } = useMoldOptions()
 import { uploadBizFiles, getFilePreviewUrl, deleteFiles } from '@/api/files'
@@ -872,6 +899,10 @@ const moldPage = reactive({
   total: 0,
   pages: 0,
 })
+
+const moldsBatchDeleting = ref(false)
+const { selectedIds, isSelected, toggleRow, isAllPageSelected, toggleSelectAllPage, clearSelection } =
+  useTableMultiSelect(() => moldPage.list)
 
 // 查询条件（与后端 MoldQueryParam 对应，注意制造商字段为 manuFacturer）
 const queryParams = reactive({
@@ -1133,11 +1164,34 @@ const confirmDelete = async () => {
   try {
     await deleteMold(deletingMold.value.id)
     successMessage.value = '删除模具成功'
+    clearSelection()
     showConfirmDialog.value = false
     await loadMolds()
     setTimeout(() => (successMessage.value = ''), 3000)
   } catch (e) {
     errorMessage.value = e.message || '删除模具失败'
+  }
+}
+
+const handleBatchDeleteMolds = async () => {
+  const ids = [...selectedIds.value]
+  if (!ids.length) return
+  const ok = window.confirm(
+    `确定批量删除选中的 ${ids.length} 套模具吗？将级联删除关联记录与附件，此操作不可恢复！`,
+  )
+  if (!ok) return
+  moldsBatchDeleting.value = true
+  errorMessage.value = ''
+  try {
+    await batchDeleteMolds(ids)
+    successMessage.value = '批量删除模具成功'
+    clearSelection()
+    await loadMolds()
+    setTimeout(() => (successMessage.value = ''), 3000)
+  } catch (e) {
+    errorMessage.value = e.message || '批量删除模具失败'
+  } finally {
+    moldsBatchDeleting.value = false
   }
 }
 
@@ -1551,6 +1605,22 @@ onMounted(() => {
   font-weight: 600;
   color: #1f2937;
   margin: 0;
+}
+
+.card-header-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.delete-outline-btn {
+  color: #b91c1c;
+  border-color: #fecaca;
+}
+
+.select-col {
+  width: 40px;
+  text-align: center;
 }
 
 .card-body {

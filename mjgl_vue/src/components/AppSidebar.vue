@@ -144,8 +144,12 @@
         <span>监测数据展示</span>
       </div>
 
-      <!-- 预留：健康评估 -->
-      <div class="menu-item disabled">
+      <!-- 健康评估 -->
+      <div
+        class="menu-item"
+        :class="{ active: route.path === '/health-reports' }"
+        @click="go('/health-reports')"
+      >
         <span class="menu-icon">❤️</span>
         <span>健康评估</span>
       </div>

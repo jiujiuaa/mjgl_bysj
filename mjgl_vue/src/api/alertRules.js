@@ -16,6 +16,10 @@ export const saveAlertRule = (data) =>
 export const deleteAlertRule = (id) =>
   request.delete(`/api/alert-rules/${id}`)
 
+/** 批量删除规则 */
+export const batchDeleteAlertRules = (ids) =>
+  request.post('/api/alert-rules/batch-delete', { ids: ids || [] })
+
 /** 设置规则启用状态：enabled 0-禁用 1-启用 */
 export const setAlertRuleEnabled = (id, enabled) =>
   request.put(`/api/alert-rules/${id}/enabled`, null, {

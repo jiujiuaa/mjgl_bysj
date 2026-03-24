@@ -2,6 +2,7 @@ package com.zjb.mjgl.controller;
 
 import com.github.pagehelper.PageInfo;
 import com.zjb.mjgl.common.Result;
+import com.zjb.mjgl.pojo.dto.BatchIdsDTO;
 import com.zjb.mjgl.pojo.dto.RepairQueryParam;
 import com.zjb.mjgl.pojo.dto.RepairRecordDTO;
 import com.zjb.mjgl.pojo.vo.RepairRecordVO;
@@ -50,6 +51,12 @@ public class RepairController {
     public Result<?> delete(@PathVariable String id) {
         log.info("收到删除维修记录请求, id={}", id);
         return repairService.deteleMold(id);
+    }
+
+    @PostMapping("/record/batch-delete")
+    public Result<?> batchDeleteRecords(@RequestBody BatchIdsDTO body) {
+        log.info("收到批量删除维修记录请求");
+        return repairService.deleteRecordsBatch(body == null ? null : body.getIds());
     }
 
     @GetMapping("/getAll")

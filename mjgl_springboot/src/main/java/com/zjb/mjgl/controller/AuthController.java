@@ -2,6 +2,7 @@ package com.zjb.mjgl.controller;
 
 import com.zjb.mjgl.common.Result;
 import com.zjb.mjgl.common.UserDetailsImpl;
+import com.zjb.mjgl.pojo.dto.BatchIdsDTO;
 import com.zjb.mjgl.pojo.dto.LoginDTO;
 import com.zjb.mjgl.pojo.dto.RegisterDTO;
 import com.zjb.mjgl.pojo.dto.UserQueryDTO;
@@ -146,6 +147,17 @@ public class AuthController {
         } catch (Exception e) {
             log.error("删除用户失败", e);
             return Result.fail("删除用户失败: " + e.getMessage());
+        }
+    }
+
+    @PostMapping("/user/batch-delete")
+    @PreAuthorize("hasRole('ADMIN')")
+    public Result<String> batchDeleteUsers(@RequestBody BatchIdsDTO body) {
+        try {
+            return userService.deleteUsersBatch(body == null ? null : body.getIds());
+        } catch (Exception e) {
+            log.error("批量删除用户失败", e);
+            return Result.fail("批量删除用户失败: " + e.getMessage());
         }
     }
 

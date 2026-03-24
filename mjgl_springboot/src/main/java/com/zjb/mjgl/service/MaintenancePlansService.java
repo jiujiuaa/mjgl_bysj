@@ -15,6 +15,8 @@ public interface MaintenancePlansService {
 
     Result<?> deletePlan(String id);
 
+    Result<?> deletePlansBatch(List<String> ids);
+
     Result<?> update(MaintenancePlans maintenancePlans);
 
     /**

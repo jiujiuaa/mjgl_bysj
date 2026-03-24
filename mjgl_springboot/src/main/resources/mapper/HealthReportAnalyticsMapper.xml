@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zjb.mjgl.mapper.HealthReportAnalyticsMapper">
+
+    <select id="listUsageStats" resultType="com.zjb.mjgl.pojo.vo.HealthUsageStatVO">
+        SELECT
+            mold_id AS moldId,
+            COUNT(1) AS totalUsageCount,
+            SUM(TIMESTAMPDIFF(SECOND, actual_start_time, actual_end_time) / 3600.0) AS totalProductionTime
+        FROM mold_usage_records
+        WHERE
+            status = 3
+            AND actual_start_time IS NOT NULL
+            AND actual_end_time IS NOT NULL
+            AND actual_end_time &gt;= #{start}
+            AND actual_end_time &lt;= #{end}
+            <if test="moldIds != null and moldIds.size() > 0">
+                AND mold_id IN
+                <foreach collection="moldIds" item="moldId" open="(" separator="," close=")">
+                    #{moldId}
+                </foreach>
+            </if>
+        GROUP BY mold_id
+    </select>
+
+    <select id="listFaultStats" resultType="com.zjb.mjgl.pojo.vo.HealthFaultStatVO">
+        SELECT
+            mold_id AS moldId,
+            COUNT(1) AS faultCount,
+            SUM(COALESCE(cost, 0)) AS repairCostTotal
+        FROM repair_records
+        WHERE
+            start_time &gt;= #{start}
+            AND start_time &lt;= #{end}
+            AND status != 1
+            <if test="moldIds != null and moldIds.size() > 0">
+                AND mold_id IN
+                <foreach collection="moldIds" item="moldId" open="(" separator="," close=")">
+                    #{moldId}
+                </foreach>
+            </if>
+        GROUP BY mold_id
+    </select>
+
+    <select id="listMaintenanceCompletedStats" resultType="com.zjb.mjgl.pojo.vo.HealthMaintenanceStatVO">
+        SELECT
+            mold_id AS moldId,
+            COUNT(1) AS maintenanceCompletedCount
+        FROM maintenance_logs
+        WHERE
+            COALESCE(actual_end_time, created_at) &gt;= #{start}
+            AND COALESCE(actual_end_time, created_at) &lt;= #{end}
+            <if test="moldIds != null and moldIds.size() > 0">
+                AND mold_id IN
+                <foreach collection="moldIds" item="moldId" open="(" separator="," close=")">
+                    #{moldId}
+                </foreach>
+            </if>
+        GROUP BY mold_id
+    </select>
+
+</mapper>
+

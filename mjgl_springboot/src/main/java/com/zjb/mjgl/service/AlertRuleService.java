@@ -19,6 +19,9 @@ public interface AlertRuleService {
 
     void deleteById(String id);
 
+    /** 批量删除规则，id 列表经 {@link com.zjb.mjgl.pojo.dto.BatchIdsDTO#normalizeList} 语义规范化 */
+    void deleteByIds(List<String> ids);
+
     void setEnabled(String id, Integer enabled);
 
     /** 供规则引擎调用：仅返回启用的规则，按 sort_order 排序 */

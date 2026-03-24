@@ -34,6 +34,8 @@ public interface UseRecordService {
      */
     Result<?> deleteRecord(String id);
 
+    Result<?> deleteRecordsBatch(List<String> ids);
+
     Result<?> updateUseRecord(MoldUsageRecordDTO moldUsageRecordDTO);
 
     /**

@@ -14,6 +14,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 
 import java.io.InputStream;
+import java.io.ByteArrayInputStream;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -300,6 +301,47 @@ public class MinioUtil {
      */
     public List<Item> listObjects() {
         return listObjects(defaultBucketName);
+    }
+
+    /**
+     * 上传字节流文件到 MinIO（用于 PDF 等非 MultipartFile 场景）。
+     *
+     * @param bytes 文件字节数组
+     * @param objectName MinIO 对象名（可包含目录）
+     * @param contentType 内容类型，例：application/pdf
+     */
+    @SneakyThrows
+    public Map<String, String> uploadBytes(byte[] bytes, String objectName, String contentType) {
+        if (bytes == null || bytes.length == 0) {
+            return null;
+        }
+        if (objectName == null || objectName.trim().isEmpty()) {
+            return null;
+        }
+        if (!bucketExists(defaultBucketName)) {
+            makeBucket(defaultBucketName);
+        }
+
+        String effectiveContentType = (contentType == null || contentType.trim().isEmpty())
+                ? "application/octet-stream"
+                : contentType;
+
+        minioClient.putObject(
+                PutObjectArgs.builder()
+                        .bucket(defaultBucketName)
+                        .object(objectName)
+                        .contentType(effectiveContentType)
+                        .stream(new ByteArrayInputStream(bytes), bytes.length, -1)
+                        .build()
+        );
+
+        Map<String, String> resultMap = new HashMap<>();
+        resultMap.put("fileName", objectName);
+        resultMap.put("originalFilename", objectName);
+        resultMap.put("fileSize", String.valueOf(bytes.length));
+        // 这里仅给出短期预览 URL（现有系统对 filePath 的语义即为“可下载 URL”）
+        resultMap.put("filePath", getObjectUrl(objectName, 7));
+        return resultMap;
     }
 
 

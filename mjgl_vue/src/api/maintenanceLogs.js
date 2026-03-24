@@ -18,6 +18,10 @@ export const updateMaintenanceLog = (data) =>
 export const deleteMaintenanceLog = (id) =>
   request.delete(`/api/mainlog/deletelog/${id}`)
 
+// 批量删除保养记录
+export const batchDeleteMaintenanceLogs = (ids) =>
+  request.post('/api/mainlog/batch-delete', { ids: ids || [] })
+
 // 保养记录合理性审批（仅 ADMIN）
 export const approveMaintenanceLog = (id, data) =>
   request.post(`/api/mainlog/log/${id}/approval`, data)

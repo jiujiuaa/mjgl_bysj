@@ -28,6 +28,10 @@ export const updateUseRecordStatus = (id, status) =>
 export const deleteUseRecord = (id) =>
   request.delete(`/api/molduse/record/${id}`)
 
+// 批量删除使用记录
+export const batchDeleteUseRecords = (ids) =>
+  request.post('/api/molduse/record/batch-delete', { ids: ids || [] })
+
 // 合理性审批：status 1=合理,2=存在问题
 export const approveUseRecord = (id, data) =>
   request.post(`/api/molduse/record/${id}/approval`, data)

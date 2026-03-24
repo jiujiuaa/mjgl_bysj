@@ -15,6 +15,14 @@
               <div class="card-header">
                 <h3 class="card-title">规则列表</h3>
                 <div class="header-actions">
+                  <button
+                    type="button"
+                    class="secondary-btn delete-btn"
+                    :disabled="batchDeleting || selectedIds.length === 0"
+                    @click="handleBatchDelete"
+                  >
+                    {{ batchDeleting ? '删除中...' : `批量删除 (${selectedIds.length})` }}
+                  </button>
                   <button type="button" class="secondary-btn" :disabled="initLoading" @click="handleInitDefaults">
                     {{ initLoading ? '初始化中...' : '初始化默认规则' }}
                   </button>
@@ -39,6 +47,14 @@
                     <table class="mold-table">
                       <thead>
                         <tr>
+                          <th class="select-col">
+                            <input
+                              type="checkbox"
+                              :checked="isAllPageSelected()"
+                              @change="toggleSelectAllPage($event.target.checked)"
+                              title="全选本页"
+                            />
+                          </th>
                           <th>规则编码</th>
                           <th>规则名称</th>
                           <th>数据来源</th>
@@ -50,9 +66,16 @@
                       </thead>
                       <tbody>
                         <tr v-if="!rules.length">
-                          <td colspan="7" class="empty-cell">暂无规则，可点击「初始化默认规则」或「新增规则」</td>
+                          <td colspan="8" class="empty-cell">暂无规则，可点击「初始化默认规则」或「新增规则」</td>
                         </tr>
                         <tr v-for="row in rules" :key="row.id">
+                          <td class="select-col">
+                            <input
+                              type="checkbox"
+                              :checked="isSelected(row.id)"
+                              @change="toggleRow(row.id)"
+                            />
+                          </td>
                           <td>{{ row.code }}</td>
                           <td>{{ row.name }}</td>
                           <td>{{ sourceLabel(row.source) }}</td>
@@ -343,10 +366,12 @@
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
 import AppSidebar from '@/components/AppSidebar.vue'
+import { useTableMultiSelect } from '@/composables/useTableMultiSelect'
 import {
   listAlertRules,
   saveAlertRule,
   deleteAlertRule,
+  batchDeleteAlertRules,
   setAlertRuleEnabled,
   initDefaultAlertRules,
 } from '@/api/alertRules'
@@ -357,7 +382,10 @@ const listLoading = ref(false)
 const initLoading = ref(false)
 const saveLoading = ref(false)
 const rowLoadingId = ref(null)
+const batchDeleting = ref(false)
 const rules = ref([])
+const { selectedIds, isSelected, toggleRow, isAllPageSelected, toggleSelectAllPage, clearSelection } =
+  useTableMultiSelect(() => rules.value)
 const showEditDialog = ref(false)
 const editId = ref(null)
 
@@ -595,11 +623,29 @@ async function handleDelete(row) {
   try {
     await deleteAlertRule(row.id)
     showMsg(true, '已删除')
+    clearSelection()
     loadList()
   } catch (e) {
     showMsg(false, e?.message || '删除失败')
   } finally {
     rowLoadingId.value = null
+  }
+}
+
+async function handleBatchDelete() {
+  const ids = [...selectedIds.value]
+  if (!ids.length) return
+  if (!confirm(`确定批量删除选中的 ${ids.length} 条规则吗？`)) return
+  batchDeleting.value = true
+  try {
+    await batchDeleteAlertRules(ids)
+    showMsg(true, '批量删除成功')
+    clearSelection()
+    loadList()
+  } catch (e) {
+    showMsg(false, e?.message || '批量删除失败')
+  } finally {
+    batchDeleting.value = false
   }
 }
 
@@ -623,6 +669,11 @@ onMounted(() => {
 </script>
 
 <style scoped>
+.select-col {
+  width: 40px;
+  text-align: center;
+}
+
 .alert-rules-container {
   min-height: 100vh;
   display: flex;

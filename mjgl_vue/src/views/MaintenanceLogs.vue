@@ -16,13 +16,23 @@
             <div class="card">
               <div class="card-header">
                 <h3 class="card-title">保养记录列表</h3>
-                <button
-                  class="primary-btn"
-                  type="button"
-                  @click="handleShowCreateDialog"
-                >
-                  新建保养记录
-                </button>
+                <div class="card-header-actions">
+                  <button
+                    type="button"
+                    class="secondary-btn delete-outline-btn"
+                    :disabled="logsBatchDeleting || selectedIds.length === 0"
+                    @click="handleBatchDelete"
+                  >
+                    {{ logsBatchDeleting ? '删除中...' : `批量删除 (${selectedIds.length})` }}
+                  </button>
+                  <button
+                    class="primary-btn"
+                    type="button"
+                    @click="handleShowCreateDialog"
+                  >
+                    新建保养记录
+                  </button>
+                </div>
               </div>
               <div class="card-body">
                 <div v-if="successMessage" class="success-message">
@@ -136,6 +146,14 @@
                     <table class="mold-table">
                       <thead>
                         <tr>
+                          <th class="select-col">
+                            <input
+                              type="checkbox"
+                              :checked="isAllPageSelected()"
+                              @change="toggleSelectAllPage($event.target.checked)"
+                              title="全选本页"
+                            />
+                          </th>
                           <th>模具编号</th>
                           <th>模具名称</th>
                           <th>关联保养计划</th>
@@ -151,9 +169,16 @@
                       </thead>
                       <tbody>
                         <tr v-if="!page.list || page.list.length === 0">
-                          <td colspan="11" class="empty-cell">暂无保养记录</td>
+                          <td colspan="12" class="empty-cell">暂无保养记录</td>
                         </tr>
                         <tr v-for="log in page.list" :key="log.id">
+                          <td class="select-col">
+                            <input
+                              type="checkbox"
+                              :checked="isSelected(log.id)"
+                              @change="toggleRow(log.id)"
+                            />
+                          </td>
                           <td>{{ log.moldCode || '-' }}</td>
                           <td>{{ log.moldName || '-' }}</td>
                           <td>{{ log.planName || '-' }}</td>
@@ -458,7 +483,14 @@ import { onMounted, onBeforeUnmount, reactive, ref, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import AppSidebar from '@/components/AppSidebar.vue'
-import { queryMaintenanceLogs, deleteMaintenanceLog, createMaintenanceLog, approveMaintenanceLog } from '@/api/maintenanceLogs'
+import { useTableMultiSelect } from '@/composables/useTableMultiSelect'
+import {
+  queryMaintenanceLogs,
+  deleteMaintenanceLog,
+  batchDeleteMaintenanceLogs,
+  createMaintenanceLog,
+  approveMaintenanceLog,
+} from '@/api/maintenanceLogs'
 import { fetchMolds } from '@/api/molds'
 import { queryMaintenancePlans } from '@/api/maintenancePlans'
 import { uploadBizFiles, getFilePreviewUrl, fetchBizFiles, deleteFiles } from '@/api/files'
@@ -489,6 +521,10 @@ const page = reactive({
   total: 0,
   pages: 0,
 })
+
+const logsBatchDeleting = ref(false)
+const { selectedIds, isSelected, toggleRow, isAllPageSelected, toggleSelectAllPage, clearSelection } =
+  useTableMultiSelect(() => page.list)
 
 const query = reactive({
   moldId: '',
@@ -745,12 +781,35 @@ const handleDelete = async (log) => {
   try {
     await deleteMaintenanceLog(log.id)
     successMessage.value = '删除保养记录成功'
+    clearSelection()
     await loadLogs()
     setTimeout(() => {
       successMessage.value = ''
     }, 3000)
   } catch (e) {
     errorMessage.value = e.message || '删除保养记录失败'
+  }
+}
+
+const handleBatchDelete = async () => {
+  const ids = [...selectedIds.value]
+  if (!ids.length) return
+  const ok = window.confirm(`确定批量删除选中的 ${ids.length} 条保养记录吗？此操作不可恢复！`)
+  if (!ok) return
+  logsBatchDeleting.value = true
+  errorMessage.value = ''
+  try {
+    await batchDeleteMaintenanceLogs(ids)
+    successMessage.value = '批量删除成功'
+    clearSelection()
+    await loadLogs()
+    setTimeout(() => {
+      successMessage.value = ''
+    }, 3000)
+  } catch (e) {
+    errorMessage.value = e.message || '批量删除失败'
+  } finally {
+    logsBatchDeleting.value = false
   }
 }
 
@@ -1037,6 +1096,22 @@ onBeforeUnmount(() => {
   font-weight: 600;
   color: #1f2937;
   margin: 0;
+}
+
+.card-header-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.delete-outline-btn {
+  color: #b91c1c;
+  border-color: #fecaca;
+}
+
+.select-col {
+  width: 40px;
+  text-align: center;
 }
 
 .card-body {

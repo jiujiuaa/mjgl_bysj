@@ -2,6 +2,7 @@ package com.zjb.mjgl.service.impl;
 
 import com.zjb.mjgl.mapper.AlertRuleMapper;
 import com.zjb.mjgl.pojo.dto.AlertRuleSaveParam;
+import com.zjb.mjgl.pojo.dto.BatchIdsDTO;
 import com.zjb.mjgl.pojo.entity.AlertRule;
 import com.zjb.mjgl.pojo.vo.AlertRuleVO;
 import com.zjb.mjgl.service.AlertRuleService;
@@ -77,6 +78,16 @@ public class AlertRuleServiceImpl implements AlertRuleService {
             throw new IllegalArgumentException("规则不存在: " + id);
         }
         alertRuleMapper.deleteById(id);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void deleteByIds(List<String> ids) {
+        List<String> normalized = BatchIdsDTO.normalizeList(ids);
+        if (normalized.isEmpty()) {
+            throw new IllegalArgumentException("请选择要删除的规则");
+        }
+        normalized.forEach(this::deleteById);
     }
 
     @Override

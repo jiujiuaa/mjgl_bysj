@@ -8,6 +8,7 @@ import com.zjb.mjgl.common.enums.RepairStatusEnum;
 import com.zjb.mjgl.common.enums.RoleEnum;
 import com.zjb.mjgl.mapper.MoldsMapper;
 import com.zjb.mjgl.mapper.RepairRecordMapper;
+import com.zjb.mjgl.pojo.dto.BatchIdsDTO;
 import com.zjb.mjgl.pojo.dto.RepairQueryParam;
 import com.zjb.mjgl.pojo.dto.RepairRecordDTO;
 import com.zjb.mjgl.pojo.entity.Molds;
@@ -258,6 +259,16 @@ public class RepairServiceImpl implements RepairService {
         }
         log.info("删除维修记录, id={}", id);
         repairRecordMapper.deleteById(id);
+        return Result.success();
+    }
+
+    @Override
+    public Result<?> deleteRecordsBatch(List<String> rawIds) {
+        List<String> ids = BatchIdsDTO.normalizeList(rawIds);
+        if (ids.isEmpty()) {
+            return Result.fail("请选择要删除的维修记录");
+        }
+        ids.forEach(id -> deteleMold(id));
         return Result.success();
     }
 

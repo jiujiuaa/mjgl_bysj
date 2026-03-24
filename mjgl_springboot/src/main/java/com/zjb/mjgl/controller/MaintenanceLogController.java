@@ -2,6 +2,7 @@ package com.zjb.mjgl.controller;
 
 import com.github.pagehelper.PageInfo;
 import com.zjb.mjgl.common.Result;
+import com.zjb.mjgl.pojo.dto.BatchIdsDTO;
 import com.zjb.mjgl.pojo.dto.MaintenanceLogQueryParam;
 import com.zjb.mjgl.pojo.entity.MaintenanceLogs;
 import com.zjb.mjgl.pojo.vo.MaintenanceLogVO;
@@ -61,6 +62,12 @@ public class MaintenanceLogController {
     public Result<?> delete(@PathVariable String id){
         log.info("收到删除保养记录请求, id={}", id);
         return maintenanceLogService.delete(id);
+    }
+
+    @PostMapping("/batch-delete")
+    public Result<?> batchDelete(@RequestBody BatchIdsDTO body) {
+        log.info("收到批量删除保养记录请求");
+        return maintenanceLogService.deleteBatch(body == null ? null : body.getIds());
     }
 
     @PutMapping("/edit")

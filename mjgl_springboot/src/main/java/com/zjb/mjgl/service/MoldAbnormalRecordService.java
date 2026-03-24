@@ -6,6 +6,8 @@ import com.zjb.mjgl.pojo.dto.MoldAbnormalRecordQueryParam;
 import com.zjb.mjgl.pojo.entity.MoldAbnormalRecord;
 import com.zjb.mjgl.pojo.vo.MoldAbnormalRecordVO;
 
+import java.util.List;
+
 public interface MoldAbnormalRecordService {
 
     /**
@@ -32,5 +34,7 @@ public interface MoldAbnormalRecordService {
      * 删除异常记录
      */
     Result<?> delete(String id);
+
+    Result<?> deleteBatch(List<String> ids);
 }
 

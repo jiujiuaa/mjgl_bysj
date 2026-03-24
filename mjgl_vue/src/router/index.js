@@ -98,6 +98,12 @@ const router = createRouter({
       meta: { requiresAuth: true },
     },
     {
+      path: '/health-reports',
+      name: 'HealthReports',
+      component: () => import('@/views/HealthReports.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
       path: '/monitoring-manual',
       redirect: '/monitoring-temperature',
     },

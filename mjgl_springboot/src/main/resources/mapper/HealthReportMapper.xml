@@ -1,0 +1,154 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zjb.mjgl.mapper.HealthReportMapper">
+
+    <resultMap id="healthReportsMap" type="com.zjb.mjgl.pojo.entity.HealthReports">
+        <id column="id" property="id"/>
+        <result column="mold_id" property="moldId"/>
+        <result column="report_title" property="reportTitle"/>
+        <result column="report_period_start" property="reportPeriodStart"
+                typeHandler="com.zjb.mjgl.typehandler.LocalDateTypeHandler"/>
+        <result column="report_period_end" property="reportPeriodEnd"
+                typeHandler="com.zjb.mjgl.typehandler.LocalDateTypeHandler"/>
+
+        <result column="total_usage_count" property="totalUsageCount"/>
+        <result column="total_production_time" property="totalProductionTime"/>
+
+        <result column="fault_count" property="faultCount"/>
+        <result column="repair_cost_total" property="repairCostTotal"/>
+
+        <result column="maintenance_completed_count" property="maintenanceCompletedCount"/>
+        <result column="maintenance_planned_count" property="maintenancePlannedCount"/>
+        <result column="maintenance_rate" property="maintenanceRate"/>
+
+        <result column="health_score" property="healthScore"/>
+        <result column="status" property="status"/>
+        <result column="pdf_file_path" property="pdfFilePath"/>
+
+        <result column="generated_by" property="generatedBy"/>
+        <result column="generated_at" property="generatedAt"
+                typeHandler="com.zjb.mjgl.typehandler.LocalDateTimeTypeHandler"/>
+    </resultMap>
+
+    <resultMap id="healthReportVoMap" type="com.zjb.mjgl.pojo.vo.HealthReportVO" extends="healthReportsMap">
+        <result column="mold_code" property="moldCode"/>
+        <result column="mold_name" property="moldName"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="com.zjb.mjgl.pojo.entity.HealthReports">
+        INSERT INTO health_reports (
+            id,
+            mold_id,
+            report_title,
+            report_period_start,
+            report_period_end,
+            total_usage_count,
+            total_production_time,
+            fault_count,
+            repair_cost_total,
+            maintenance_completed_count,
+            maintenance_planned_count,
+            maintenance_rate,
+            health_score,
+            status,
+            pdf_file_path,
+            generated_by,
+            generated_at
+        ) VALUES (
+            #{id},
+            #{moldId},
+            #{reportTitle},
+            #{reportPeriodStart, typeHandler=com.zjb.mjgl.typehandler.LocalDateTypeHandler},
+            #{reportPeriodEnd, typeHandler=com.zjb.mjgl.typehandler.LocalDateTypeHandler},
+            #{totalUsageCount},
+            #{totalProductionTime},
+            #{faultCount},
+            #{repairCostTotal},
+            #{maintenanceCompletedCount},
+            #{maintenancePlannedCount},
+            #{maintenanceRate},
+            #{healthScore},
+            #{status},
+            #{pdfFilePath},
+            #{generatedBy},
+            #{generatedAt, typeHandler=com.zjb.mjgl.typehandler.LocalDateTimeTypeHandler}
+        )
+    </insert>
+
+    <update id="update" parameterType="com.zjb.mjgl.pojo.entity.HealthReports">
+        UPDATE health_reports
+        <set>
+            mold_id = #{moldId},
+            report_title = #{reportTitle},
+            report_period_start = #{reportPeriodStart, typeHandler=com.zjb.mjgl.typehandler.LocalDateTypeHandler},
+            report_period_end = #{reportPeriodEnd, typeHandler=com.zjb.mjgl.typehandler.LocalDateTypeHandler},
+            total_usage_count = #{totalUsageCount},
+            total_production_time = #{totalProductionTime},
+            fault_count = #{faultCount},
+            repair_cost_total = #{repairCostTotal},
+            maintenance_completed_count = #{maintenanceCompletedCount},
+            maintenance_planned_count = #{maintenancePlannedCount},
+            maintenance_rate = #{maintenanceRate},
+            health_score = #{healthScore},
+            status = #{status},
+            pdf_file_path = #{pdfFilePath},
+            generated_by = #{generatedBy},
+            generated_at = #{generatedAt, typeHandler=com.zjb.mjgl.typehandler.LocalDateTimeTypeHandler}
+        </set>
+        WHERE id = #{id}
+    </update>
+
+    <select id="selectById" resultMap="healthReportsMap">
+        SELECT *
+        FROM health_reports
+        WHERE id = #{id}
+    </select>
+
+    <select id="selectByMoldIdAndPeriod" resultMap="healthReportsMap">
+        SELECT *
+        FROM health_reports
+        WHERE mold_id = #{moldId}
+          AND report_period_start = #{periodStart, typeHandler=com.zjb.mjgl.typehandler.LocalDateTypeHandler}
+          AND report_period_end = #{periodEnd, typeHandler=com.zjb.mjgl.typehandler.LocalDateTypeHandler}
+        LIMIT 1
+    </select>
+
+    <select id="queryByCondition" parameterType="com.zjb.mjgl.pojo.dto.HealthReportQueryParam" resultMap="healthReportVoMap">
+        SELECT
+            hr.*,
+            m.mold_code AS mold_code,
+            m.name AS mold_name
+        FROM health_reports hr
+        LEFT JOIN molds m ON hr.mold_id = m.id
+        <where>
+            <if test="moldId != null and moldId != ''">
+                AND hr.mold_id = #{moldId}
+            </if>
+            <if test="status != null">
+                AND hr.status = #{status}
+            </if>
+            <if test="periodStart != null">
+                AND hr.report_period_start &gt;= #{periodStart, typeHandler=com.zjb.mjgl.typehandler.LocalDateTypeHandler}
+            </if>
+            <if test="periodEnd != null">
+                AND hr.report_period_end &lt;= #{periodEnd, typeHandler=com.zjb.mjgl.typehandler.LocalDateTypeHandler}
+            </if>
+            <if test="minHealthScore != null">
+                AND hr.health_score &gt;= #{minHealthScore}
+            </if>
+            <if test="maxHealthScore != null">
+                AND hr.health_score &lt;= #{maxHealthScore}
+            </if>
+        </where>
+        ORDER BY hr.generated_at DESC, hr.id
+    </select>
+
+    <delete id="deleteById" parameterType="string">
+        DELETE
+        FROM health_reports
+        WHERE id = #{id}
+    </delete>
+
+</mapper>
+

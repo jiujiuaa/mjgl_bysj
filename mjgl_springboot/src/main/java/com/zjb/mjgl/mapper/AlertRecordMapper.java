@@ -29,4 +29,9 @@ public interface AlertRecordMapper {
             @Param("status") Integer status);
 
     List<AlertRecordVO> queryByCondition(AlertRecordQueryParam param);
+
+    /**
+     * 按模具ID删除该模具下所有告警记录（用于级联清理模具）
+     */
+    int deleteByMoldId(@Param("moldId") String moldId);
 }

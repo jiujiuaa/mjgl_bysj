@@ -16,13 +16,23 @@
             <div class="card">
               <div class="card-header">
                 <h3 class="card-title">维修记录列表</h3>
-                <button
-                  class="primary-btn"
-                  type="button"
-                  @click="handleShowCreateDialog"
-                >
-                  新建维修
-                </button>
+                <div class="card-header-actions">
+                  <button
+                    type="button"
+                    class="secondary-btn delete-outline-btn"
+                    :disabled="repairBatchDeleting || selectedIds.length === 0"
+                    @click="handleBatchDeleteRecords"
+                  >
+                    {{ repairBatchDeleting ? '删除中...' : `批量删除 (${selectedIds.length})` }}
+                  </button>
+                  <button
+                    class="primary-btn"
+                    type="button"
+                    @click="handleShowCreateDialog"
+                  >
+                    新建维修
+                  </button>
+                </div>
               </div>
               <div class="card-body">
                 <div v-if="successMessage" class="success-message">
@@ -127,6 +137,14 @@
                     <table class="mold-table">
                       <thead>
                         <tr>
+                          <th class="select-col">
+                            <input
+                              type="checkbox"
+                              :checked="isAllPageSelected()"
+                              @change="toggleSelectAllPage($event.target.checked)"
+                              title="全选本页"
+                            />
+                          </th>
                           <th>模具编号</th>
                           <th>模具名称</th>
                           <th>类别</th>
@@ -145,12 +163,19 @@
                       </thead>
                       <tbody>
                         <tr v-if="!repairPage.list || repairPage.list.length === 0">
-                          <td colspan="15" class="empty-cell">暂无维修记录</td>
+                          <td colspan="16" class="empty-cell">暂无维修记录</td>
                         </tr>
                         <tr
                           v-for="record in repairPage.list"
                           :key="record.id"
                         >
+                          <td class="select-col">
+                            <input
+                              type="checkbox"
+                              :checked="isSelected(record.id)"
+                              @change="toggleRow(record.id)"
+                            />
+                          </td>
                           <td>{{ record.moldCode }}</td>
                           <td>{{ record.moldName }}</td>
                           <td>{{ record.moldCategory || '-' }}</td>
@@ -881,11 +906,13 @@ import { useAuthStore } from '@/stores/auth'
 import AppSidebar from '@/components/AppSidebar.vue'
 import { fetchMolds } from '@/api/molds'
 import { uploadBizFiles, getFilePreviewUrl, fetchBizFiles, deleteFiles } from '@/api/files'
+import { useTableMultiSelect } from '@/composables/useTableMultiSelect'
 import {
   queryRepairRecords,
   createRepairRecord,
   updateRepairRecord,
   deleteRepairRecord,
+  batchDeleteRepairRecords,
   approveRepairRecord,
 } from '@/api/repairRecords'
 import { fetchAllUsers } from '@/api/auth'
@@ -908,6 +935,9 @@ const repairPage = reactive({
   total: 0,
   pages: 0,
 })
+const repairBatchDeleting = ref(false)
+const { selectedIds, isSelected, toggleRow, isAllPageSelected, toggleSelectAllPage, clearSelection } =
+  useTableMultiSelect(() => repairPage.list)
 const rowLoadingId = ref('')
 
 const moldOptions = ref([])
@@ -1322,6 +1352,7 @@ const handleDeleteRecord = async (record) => {
   try {
     await deleteRepairRecord(record.id)
     successMessage.value = '删除维修记录成功'
+    clearSelection()
     await loadRecords()
     setTimeout(() => {
       successMessage.value = ''
@@ -1330,6 +1361,28 @@ const handleDeleteRecord = async (record) => {
     errorMessage.value = e.message || '删除维修记录失败'
   } finally {
     rowLoadingId.value = ''
+  }
+}
+
+const handleBatchDeleteRecords = async () => {
+  const ids = [...selectedIds.value]
+  if (!ids.length) return
+  const ok = window.confirm(`确定批量删除选中的 ${ids.length} 条维修记录吗？此操作不可恢复！`)
+  if (!ok) return
+  repairBatchDeleting.value = true
+  errorMessage.value = ''
+  try {
+    await batchDeleteRepairRecords(ids)
+    successMessage.value = '批量删除成功'
+    clearSelection()
+    await loadRecords()
+    setTimeout(() => {
+      successMessage.value = ''
+    }, 3000)
+  } catch (e) {
+    errorMessage.value = e.message || '批量删除失败'
+  } finally {
+    repairBatchDeleting.value = false
   }
 }
 
@@ -1830,6 +1883,22 @@ onMounted(async () => {
   font-weight: 600;
   color: #1f2937;
   margin: 0;
+}
+
+.card-header-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.delete-outline-btn {
+  color: #b91c1c;
+  border-color: #fecaca;
+}
+
+.select-col {
+  width: 40px;
+  text-align: center;
 }
 
 .card-body {

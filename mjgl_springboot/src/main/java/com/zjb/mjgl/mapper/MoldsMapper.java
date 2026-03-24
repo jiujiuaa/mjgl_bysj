@@ -2,6 +2,7 @@ package com.zjb.mjgl.mapper;
 
 import com.zjb.mjgl.pojo.dto.MoldQueryParam;
 import com.zjb.mjgl.pojo.entity.Molds;
+import com.zjb.mjgl.pojo.vo.MoldMetaVO;
 import com.zjb.mjgl.pojo.vo.MoldDetailVO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
@@ -37,5 +38,10 @@ public interface MoldsMapper {
     int updateStatus(@Param("id") String id, @Param("status") int status);
 
     Molds selectById(String id);
+
+    /**
+     * 健康评估/统计场景：只返回模具的基础信息，避免加载 specs/qrcode/files 造成性能问题。
+     */
+    List<MoldMetaVO> listMeta();
 }
 

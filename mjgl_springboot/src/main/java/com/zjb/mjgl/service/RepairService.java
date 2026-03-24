@@ -19,6 +19,8 @@ public interface RepairService {
 
     Result<?> deteleMold(String id);
 
+    Result<?> deleteRecordsBatch(List<String> ids);
+
     Result<List<RepairRecordVO>> getAllRecord();
 
     PageInfo<RepairRecordVO> queryByCondition(RepairQueryParam repairQueryParam, int pageNum, int pageSize);

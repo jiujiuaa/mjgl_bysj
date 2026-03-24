@@ -26,4 +26,9 @@ public interface MaintenancePlanMapper {
     List<MaintenancePlanWithMoldVO> query(MaintenancePlanQueryParam maintenancePlanQueryParam);
 
     int updateActiveStatus(@Param("id") String id, @Param("isActive") Integer isActive);
+
+    /**
+     * 批量取保养计划模板（仅用来健康统计推导 plannedCount）
+     */
+    List<MaintenancePlans> listByMoldIds(@Param("moldIds") List<String> moldIds);
 }

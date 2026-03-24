@@ -14,3 +14,7 @@ export const updateAbnormalRecord = (data) =>
 export const deleteAbnormalRecord = (id) =>
   request.delete(`/api/mold-abnormal/delete/${id}`)
 
+// 异常记录 - 批量删除
+export const batchDeleteAbnormalRecords = (ids) =>
+  request.post('/api/mold-abnormal/batch-delete', { ids: ids || [] })
+
