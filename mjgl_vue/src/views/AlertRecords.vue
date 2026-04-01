@@ -152,6 +152,17 @@
                     <span class="page-info">
                       第 {{ pageNum }} / {{ alertPage.pages }} 页，共 {{ alertPage.total ?? 0 }} 条
                     </span>
+                    <input
+                      v-model.number="pageInput"
+                      type="number"
+                      class="page-input"
+                      min="1"
+                      :max="alertPage.pages"
+                      @keyup.enter="handlePageJump"
+                    />
+                    <button type="button" class="page-btn small" @click="handlePageJump">
+                      跳转
+                    </button>
                     <button
                       class="page-btn"
                       :disabled="pageNum === alertPage.pages"
@@ -211,6 +222,7 @@ const listLoading = ref(false)
 const runRulesLoading = ref(false)
 const rowLoadingId = ref(null)
 const pageNum = ref(1)
+const pageInput = ref(1)
 const pageSize = 10
 
 const query = reactive({
@@ -304,6 +316,7 @@ async function loadList() {
 
 function handleQuery() {
   pageNum.value = 1
+  pageInput.value = 1
   loadList()
 }
 
@@ -313,12 +326,26 @@ function handleReset() {
   query.status = null
   query.alertType = null
   pageNum.value = 1
+  pageInput.value = 1
   loadList()
 }
 
 function changePage(p) {
+  if (p < 1 || (alertPage.value.pages && p > alertPage.value.pages)) return
   pageNum.value = p
+  pageInput.value = p
   loadList()
+}
+
+function handlePageJump() {
+  const totalPages = alertPage.value.pages || 0
+  const target = Number(pageInput.value) || 0
+  if (!totalPages || target < 1 || target > totalPages) {
+    pageInput.value = pageNum.value
+    return
+  }
+  if (target === pageNum.value) return
+  changePage(target)
 }
 
 async function handleRunRules() {
@@ -643,6 +670,19 @@ onMounted(() => {
   background: #fff;
   cursor: pointer;
   font-size: 14px;
+}
+
+.page-btn.small {
+  padding: 4px 10px;
+  font-size: 12px;
+}
+
+.page-input {
+  width: 60px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  border: 1px solid #d1d5db;
+  font-size: 13px;
 }
 
 .page-btn:disabled {

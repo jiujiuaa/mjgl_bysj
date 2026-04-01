@@ -5,6 +5,8 @@ import com.zjb.mjgl.pojo.dto.SendAlertToUserDTO;
 import com.zjb.mjgl.pojo.entity.MoldAlertMessage;
 import com.zjb.mjgl.service.AlertMessageService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 /**
@@ -14,6 +16,8 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/ws")
 @RequiredArgsConstructor
+@PreAuthorize("hasRole('ADMIN')")
+@Slf4j
 public class WebSocketController {
 
     private final AlertMessageService alertMessageService;
@@ -24,8 +28,13 @@ public class WebSocketController {
      */
     @PostMapping("/send")
     public Result<Void> sendAlert(@RequestBody MoldAlertMessage message) {
-        alertMessageService.broadcastAlert(message);
-        return Result.success();
+        try {
+            alertMessageService.broadcastAlert(message);
+            return Result.success();
+        } catch (Exception e) {
+            log.error("发送广播告警异常", e);
+            return Result.fail("发送广播告警失败: " + e.getMessage());
+        }
     }
 
     /**
@@ -34,8 +43,13 @@ public class WebSocketController {
      */
     @PostMapping("/sendToUser/{userId}")
     public Result<Void> sendAlertToUserPath(@PathVariable String userId, @RequestBody MoldAlertMessage message) {
-        alertMessageService.sendAlertToUser(userId, message);
-        return Result.success();
+        try {
+            alertMessageService.sendAlertToUser(userId, message);
+            return Result.success();
+        } catch (Exception e) {
+            log.error("单播告警异常, userId={}", userId, e);
+            return Result.fail("单播告警失败: " + e.getMessage());
+        }
     }
 
     /**
@@ -44,10 +58,15 @@ public class WebSocketController {
      */
     @PostMapping("/sendToUser")
     public Result<Void> sendAlertToUserBody(@RequestBody SendAlertToUserDTO dto) {
-        if (dto.getUserId() == null || dto.getUserId().trim().isEmpty()) {
-            return Result.fail("userId 不能为空");
+        try {
+            if (dto.getUserId() == null || dto.getUserId().trim().isEmpty()) {
+                return Result.fail("userId 不能为空");
+            }
+            alertMessageService.sendAlertByDto(dto);
+            return Result.success();
+        } catch (Exception e) {
+            log.error("按请求体发送告警异常, userId={}", dto == null ? null : dto.getUserId(), e);
+            return Result.fail("按请求体发送告警失败: " + e.getMessage());
         }
-        alertMessageService.sendAlertByDto(dto);
-        return Result.success();
     }
 }

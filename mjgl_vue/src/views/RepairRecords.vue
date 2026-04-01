@@ -216,14 +216,6 @@
                                 详情
                               </button>
                               <button
-                                v-if="isAdmin && record.status === 4"
-                                class="action-btn status-btn"
-                                :disabled="rowLoadingId === record.id"
-                                @click="openApprovalDialog(record)"
-                              >
-                                审批
-                              </button>
-                              <button
                                 v-if="record.status === 1"
                                 class="action-btn status-btn"
                                 :disabled="rowLoadingId === record.id"
@@ -273,6 +265,21 @@
                       第 {{ pageNum }} / {{ repairPage.pages }} 页，
                       共 {{ repairPage.total || 0 }} 条
                     </span>
+                    <label class="page-jump">
+                      跳转到
+                      <input
+                        v-model.number="pageInput"
+                        type="number"
+                        min="1"
+                        :max="repairPage.pages"
+                        class="page-input"
+                        @keyup.enter="handlePageJump"
+                      />
+                      页
+                      <button type="button" class="page-btn small" @click="handlePageJump">
+                        跳转
+                      </button>
+                    </label>
                     <button
                       class="page-btn"
                       :disabled="pageNum === repairPage.pages"
@@ -930,6 +937,7 @@ const errorMessage = ref('')
 
 const pageNum = ref(1)
 const pageSize = ref(10)
+const pageInput = ref(1)
 const repairPage = reactive({
   list: [],
   total: 0,
@@ -1056,6 +1064,13 @@ const changePage = (newPage) => {
   if (newPage < 1 || (repairPage.pages && newPage > repairPage.pages)) return
   pageNum.value = newPage
   loadRecords()
+}
+
+const handlePageJump = () => {
+  const target = Number(pageInput.value)
+  if (!Number.isFinite(target)) return
+  if (target < 1 || (repairPage.pages && target > repairPage.pages)) return
+  changePage(target)
 }
 
 const loadUserOptions = async () => {
@@ -1720,6 +1735,7 @@ onMounted(async () => {
     query.moldId = String(route.query.moldId)
   }
   await Promise.all([loadMoldOptions(), loadUserOptions(), loadRecords()])
+  pageInput.value = pageNum.value
 })
 </script>
 
@@ -1970,6 +1986,11 @@ onMounted(async () => {
   font-size: 13px;
 }
 
+.page-btn.small {
+  padding: 4px 10px;
+  font-size: 12px;
+}
+
 .page-btn:disabled {
   cursor: not-allowed;
   opacity: 0.6;
@@ -1982,6 +2003,22 @@ onMounted(async () => {
 .page-info {
   font-size: 13px;
   color: #6b7280;
+}
+
+.page-jump {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  color: #4b5563;
+}
+
+.page-input {
+  width: 60px;
+  padding: 4px 6px;
+  border-radius: 4px;
+  border: 1px solid #d1d5db;
+  font-size: 13px;
 }
 
 .mold-filter-hint {

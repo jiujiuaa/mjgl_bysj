@@ -241,6 +241,21 @@
                       第 {{ pageNum }} / {{ moldPage.pages }} 页，
                       共 {{ moldPage.total || 0 }} 条
                     </span>
+                    <label class="page-jump">
+                      跳转到
+                      <input
+                        v-model.number="pageInput"
+                        type="number"
+                        min="1"
+                        :max="moldPage.pages"
+                        class="page-input"
+                        @keyup.enter="handlePageJump"
+                      />
+                      页
+                      <button type="button" class="page-btn small" @click="handlePageJump">
+                        跳转
+                      </button>
+                    </label>
                     <button
                       class="page-btn"
                       :disabled="pageNum === moldPage.pages"
@@ -680,6 +695,45 @@
           </div>
 
           <div class="detail-section">
+            <div class="detail-title">二维码信息</div>
+            <div v-if="!detailMold.qrcode" class="no-files">
+              暂无二维码
+            </div>
+            <div v-else class="qrcode-info">
+              <div class="detail-grid">
+                <div class="detail-item">
+                  <span class="label">二维码类型</span>
+                  <span class="value">{{ formatQrcodeType(detailMold.qrcode?.qrcodeType) }}</span>
+                </div>
+                <div class="detail-item">
+                  <span class="label">二维码状态</span>
+                  <span class="value">{{ detailMold.qrcode?.isActive ? '有效' : '已停用' }}</span>
+                </div>
+                <div class="detail-item detail-item-full">
+                  <span class="label">二维码内容（codeId）</span>
+                  <div class="qrcode-id-row">
+                    <span class="qrcode-id">{{ detailMold.qrcode?.id }}</span>
+                    <button
+                      type="button"
+                      class="copy-btn"
+                      @click="copyDetailQrcodeId(detailMold.qrcode?.id)"
+                      :disabled="!detailMold.qrcode?.id"
+                    >
+                      复制
+                    </button>
+                  </div>
+                    <div v-if="detailQrcodeImg" class="qrcode-img-wrap">
+                      <img :src="detailQrcodeImg" alt="mold-qrcode" class="qrcode-img" />
+                    </div>
+                </div>
+              </div>
+              <div v-if="detailCopyMessage" class="copy-message">
+                {{ detailCopyMessage }}
+              </div>
+            </div>
+          </div>
+
+          <div class="detail-section">
             <div class="detail-title">附件列表</div>
             <div v-if="!detailMold.files || detailMold.files.length === 0" class="no-files">
               暂无附件
@@ -893,6 +947,7 @@ const showOpsChildren = ref(true)
 const showMonitoringChildren = ref(true)
 
 const pageNum = ref(1)
+const pageInput = ref(1)
 const pageSize = ref(10)
 const moldPage = reactive({
   list: [],
@@ -942,6 +997,59 @@ const detailSelectedFiles = ref([])
 const detailUploadFileType = ref('photo')
 const detailUploadDescription = ref('')
 const detailUploadLoading = ref(false)
+const detailCopyMessage = ref('')
+const detailQrcodeImg = ref('')
+
+let qrcodeCdnPromise = null
+
+const loadQrcodeCdn = () => {
+  if (qrcodeCdnPromise) return qrcodeCdnPromise
+
+  qrcodeCdnPromise = new Promise((resolve, reject) => {
+    try {
+      const existing = document.getElementById('qrcode-cdn')
+      if (existing) {
+        // 等脚本加载完成
+        const check = () => {
+          const lib = window.QRCode || window.qrcode
+          if (lib && typeof lib.toDataURL === 'function') return resolve(lib)
+          return setTimeout(check, 100)
+        }
+        check()
+        return
+      }
+
+      const script = document.createElement('script')
+      script.id = 'qrcode-cdn'
+      script.src = 'https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js'
+      script.async = true
+      script.onload = () => {
+        const lib = window.QRCode || window.qrcode
+        if (lib && typeof lib.toDataURL === 'function') resolve(lib)
+        else reject(new Error('二维码库加载失败：未找到 toDataURL'))
+      }
+      script.onerror = () => reject(new Error('二维码库加载失败：script error'))
+      document.head.appendChild(script)
+    } catch (e) {
+      reject(e)
+    }
+  })
+
+  return qrcodeCdnPromise
+}
+
+const generateDetailQrcodeImg = async (codeId) => {
+  detailQrcodeImg.value = ''
+  const id = codeId ? String(codeId).trim() : ''
+  if (!id) return
+
+  const qrcodeLib = await loadQrcodeCdn()
+  // 生成二维码：直接编码 codeId（不再跳转到已移除的“移动扫码”页面）
+  detailQrcodeImg.value = await qrcodeLib.toDataURL(id, {
+    width: 180,
+    margin: 1,
+  })
+}
 
 const emptyForm = () => ({
   id: null,
@@ -1036,7 +1144,15 @@ const changePage = (newPage) => {
     return
   }
   pageNum.value = newPage
+  pageInput.value = newPage
   loadMolds()
+}
+
+const handlePageJump = () => {
+  const target = Number(pageInput.value)
+  if (!Number.isFinite(target)) return
+  if (target < 1 || (moldPage.pages && target > moldPage.pages)) return
+  changePage(target)
 }
 
 const handleShowAddDialog = () => {
@@ -1144,16 +1260,29 @@ const handleDeleteMold = (item) => {
   showConfirmDialog.value = true
 }
 
-const handleViewDetail = (item) => {
+const handleViewDetail = async (item) => {
   detailMold.value = item
   detailSelectedFiles.value = []
   detailUploadFileType.value = 'photo'
   detailUploadDescription.value = ''
+  detailCopyMessage.value = ''
+  detailQrcodeImg.value = ''
   showDetailDialog.value = true
+
+  if (item?.qrcode?.id) {
+    try {
+      await generateDetailQrcodeImg(item.qrcode.id)
+    } catch (e) {
+      // 静默失败：至少让 codeId 可复制
+      detailQrcodeImg.value = ''
+    }
+  }
 }
 
 const closeDetailDialog = () => {
   showDetailDialog.value = false
+  detailCopyMessage.value = ''
+  detailQrcodeImg.value = ''
 }
 
 const confirmDelete = async () => {
@@ -1226,6 +1355,31 @@ const formatQrcodeType = (type) => {
     3: '异常上报',
   }
   return map[type] || type
+}
+
+const copyDetailQrcodeId = async (qrcodeId) => {
+  const id = qrcodeId || ''
+  if (!id.trim()) return
+  try {
+    await navigator.clipboard.writeText(id.trim())
+    detailCopyMessage.value = '二维码内容已复制'
+  } catch (e) {
+    // 回退方案：使用临时 textarea 复制
+    const ta = document.createElement('textarea')
+    ta.value = id.trim()
+    ta.style.position = 'fixed'
+    ta.style.top = '-1000px'
+    ta.style.left = '-1000px'
+    document.body.appendChild(ta)
+    ta.select()
+    document.execCommand('copy')
+    document.body.removeChild(ta)
+    detailCopyMessage.value = '二维码内容已复制'
+  } finally {
+    setTimeout(() => {
+      detailCopyMessage.value = ''
+    }, 2000)
+  }
 }
 
 const formatDate = (dateStr) => {
@@ -1441,6 +1595,7 @@ onMounted(() => {
   const queryPageSize = Number(route.query.pageSize || 10)
   pageNum.value = Number.isNaN(queryPageNum) ? 1 : queryPageNum
   pageSize.value = Number.isNaN(queryPageSize) ? 10 : queryPageSize
+  pageInput.value = pageNum.value
   loadMolds()
 })
 </script>
@@ -1854,6 +2009,11 @@ onMounted(() => {
   transition: all 0.2s;
 }
 
+.page-btn.small {
+  padding: 4px 10px;
+  font-size: 12px;
+}
+
 .page-btn:disabled {
   cursor: not-allowed;
   opacity: 0.6;
@@ -1866,6 +2026,22 @@ onMounted(() => {
 .page-info {
   font-size: 13px;
   color: #6b7280;
+}
+
+.page-jump {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  color: #4b5563;
+}
+
+.page-input {
+  width: 60px;
+  padding: 4px 6px;
+  border-radius: 4px;
+  border: 1px solid #d1d5db;
+  font-size: 13px;
 }
 
 .dialog-overlay {
@@ -2168,6 +2344,64 @@ onMounted(() => {
 .no-files {
   font-size: 13px;
   color: #9ca3af;
+}
+
+.qrcode-info {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.qrcode-id-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.qrcode-id {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono',
+    'Courier New', monospace;
+  font-size: 12px;
+  background: #f3f4f6;
+  padding: 6px 10px;
+  border-radius: 8px;
+  word-break: break-all;
+  color: #111827;
+}
+
+.copy-btn {
+  border: 1px solid #d1d5db;
+  background: #ffffff;
+  border-radius: 8px;
+  padding: 6px 10px;
+  cursor: pointer;
+}
+
+.copy-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.copy-message {
+  font-size: 13px;
+  color: #2563eb;
+}
+
+.qrcode-img-wrap {
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.qrcode-img {
+  width: 180px;
+  height: 180px;
+  border-radius: 10px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
 }
 
 .file-list {

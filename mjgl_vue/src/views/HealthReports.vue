@@ -238,6 +238,21 @@
                     <span class="page-info">
                       第 {{ pageNum }} / {{ page.pages }} 页，共 {{ page.total || 0 }} 条
                     </span>
+                    <label class="page-jump">
+                      跳转到
+                      <input
+                        v-model.number="pageInput"
+                        type="number"
+                        min="1"
+                        :max="page.pages"
+                        class="page-input"
+                        @keyup.enter="handlePageJump"
+                      />
+                      页
+                      <button type="button" class="page-btn small" @click="handlePageJump">
+                        跳转
+                      </button>
+                    </label>
                     <button class="page-btn" :disabled="pageNum === page.pages" @click="changePage(pageNum + 1)">
                       下一页
                     </button>
@@ -326,6 +341,7 @@ const { moldOptions, loadMoldOptions } = useMoldOptions({ immediate: true })
 
 const pageNum = ref(1)
 const pageSize = ref(10)
+const pageInput = ref(1)
 const page = reactive({
   list: [],
   total: 0,
@@ -465,6 +481,13 @@ const changePage = (newPage) => {
   loadReports()
 }
 
+const handlePageJump = () => {
+  const target = Number(pageInput.value)
+  if (!Number.isFinite(target)) return
+  if (target < 1 || (page.pages && target > page.pages)) return
+  changePage(target)
+}
+
 const handleExportPdf = async (item) => {
   if (!item?.id) return
   const ok = window.confirm(`确定为该模具该周期报告导出 PDF 并归档？\nreportId: ${item.id}`)
@@ -591,6 +614,7 @@ onMounted(async () => {
   const queryPageSize = Number(route?.query?.pageSize || 10)
   pageNum.value = Number.isNaN(queryPageNum) ? 1 : queryPageNum
   pageSize.value = Number.isNaN(queryPageSize) ? 10 : queryPageSize
+  pageInput.value = pageNum.value
   loadReports()
 })
 
@@ -930,6 +954,27 @@ const getRiskClass = (riskLevel) => {
 .page-info {
   font-size: 13px;
   color: #6b7280;
+}
+
+.page-btn.small {
+  padding: 4px 10px;
+  font-size: 12px;
+}
+
+.page-jump {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  color: #4b5563;
+}
+
+.page-input {
+  width: 60px;
+  padding: 4px 6px;
+  border-radius: 4px;
+  border: 1px solid #d1d5db;
+  font-size: 13px;
 }
 
 .col-actions {

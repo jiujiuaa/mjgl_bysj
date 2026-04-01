@@ -60,5 +60,13 @@ public class NotificationServiceImpl implements NotificationService {
         }
         userNotificationMapper.markRead(id);
     }
+
+    @Override
+    public void markAllRead(String userId) {
+        if (userId == null || userId.trim().isEmpty()) {
+            return;
+        }
+        userNotificationMapper.markAllReadByUserId(userId);
+    }
 }
 

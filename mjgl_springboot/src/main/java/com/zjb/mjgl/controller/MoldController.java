@@ -9,6 +9,7 @@ import com.zjb.mjgl.pojo.vo.MoldDetailVO;
 import com.zjb.mjgl.service.MoldService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -16,6 +17,7 @@ import java.util.List;
 @Slf4j
 @RestController
 @RequestMapping("/api/molds")
+@PreAuthorize("isAuthenticated()")
 public class MoldController {
 
     @Autowired
@@ -26,8 +28,13 @@ public class MoldController {
      */
     @PostMapping("/create")
     public Result<MoldDetailVO> create(@RequestBody MoldParam param) {
-        MoldDetailVO vo = moldService.createMold(param);
-        return Result.success(vo);
+        try {
+            MoldDetailVO vo = moldService.createMold(param);
+            return Result.success(vo);
+        } catch (Exception e) {
+            log.error("创建模具异常", e);
+            return Result.fail("创建模具失败: " + e.getMessage());
+        }
     }
 
     /**
@@ -35,23 +42,38 @@ public class MoldController {
      */
     @PutMapping("/update")
     public Result<Void> update(@RequestBody MoldParam param) {
-        moldService.updateMold(param);
-        return Result.success();
+        try {
+            moldService.updateMold(param);
+            return Result.success();
+        } catch (Exception e) {
+            log.error("更新模具异常, id={}", param == null ? null : param.getId(), e);
+            return Result.fail("更新模具失败: " + e.getMessage());
+        }
     }
     @DeleteMapping("/{id}")
     public Result<String> delete(@PathVariable String id) {
+        try {
             moldService.deteleMold(id);
-        return Result.success(id);
+            return Result.success(id);
+        } catch (Exception e) {
+            log.error("删除模具异常, id={}", id, e);
+            return Result.fail("删除模具失败: " + e.getMessage());
+        }
     }
 
     @PostMapping("/batch-delete")
     public Result<Void> batchDelete(@RequestBody BatchIdsDTO body) {
-        List<String> ids = BatchIdsDTO.normalizeList(body == null ? null : body.getIds());
-        if (ids.isEmpty()) {
-            return Result.fail("请选择要删除的模具");
+        try {
+            List<String> ids = BatchIdsDTO.normalizeList(body == null ? null : body.getIds());
+            if (ids.isEmpty()) {
+                return Result.fail("请选择要删除的模具");
+            }
+            moldService.deleteMoldsBatch(ids);
+            return Result.success();
+        } catch (Exception e) {
+            log.error("批量删除模具异常", e);
+            return Result.fail("批量删除模具失败: " + e.getMessage());
         }
-        moldService.deleteMoldsBatch(ids);
-        return Result.success();
     }
 
     /**
@@ -62,7 +84,12 @@ public class MoldController {
     public Result<PageInfo<MoldDetailVO>> list(
             @RequestParam(defaultValue = "1") int pageNum,
             @RequestParam(defaultValue = "10") int pageSize) {
-        return Result.success(moldService.listAllAsDetail(pageNum, pageSize));
+        try {
+            return Result.success(moldService.listAllAsDetail(pageNum, pageSize));
+        } catch (Exception e) {
+            log.error("分页查询模具异常, pageNum={}, pageSize={}", pageNum, pageSize, e);
+            return Result.fail("查询模具列表失败: " + e.getMessage());
+        }
     }
 
     /**
@@ -72,6 +99,11 @@ public class MoldController {
     public Result<PageInfo<MoldDetailVO>> query(@RequestBody MoldQueryParam param,
                                                @RequestParam(defaultValue = "1") int pageNum,
                                                @RequestParam(defaultValue = "10") int pageSize) {
-        return Result.success(moldService.queryByCondition(param, pageNum, pageSize));
+        try {
+            return Result.success(moldService.queryByCondition(param, pageNum, pageSize));
+        } catch (Exception e) {
+            log.error("条件查询模具异常, pageNum={}, pageSize={}", pageNum, pageSize, e);
+            return Result.fail("条件查询模具失败: " + e.getMessage());
+        }
     }
 }

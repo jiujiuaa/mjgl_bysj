@@ -6,6 +6,7 @@ import com.zjb.mjgl.pojo.dto.BatchIdsDTO;
 import com.zjb.mjgl.pojo.vo.AlertRuleVO;
 import com.zjb.mjgl.service.AlertRuleService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -17,6 +18,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/alert-rules")
 @RequiredArgsConstructor
+@PreAuthorize("hasRole('ADMIN')")
 public class AlertRuleController {
 
     private final AlertRuleService alertRuleService;

@@ -8,6 +8,7 @@ import com.zjb.mjgl.pojo.vo.TemperatureLogVO;
 import com.zjb.mjgl.service.TemperatureLogService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Optional;
@@ -16,6 +17,7 @@ import java.util.Optional;
 @RestController
 @RequestMapping("/api/temperature-log")
 @RequiredArgsConstructor
+@PreAuthorize("hasAnyRole('ADMIN','INSPECTOR')")
 public class TemperatureLogController {
 
     private final TemperatureLogService temperatureLogService;

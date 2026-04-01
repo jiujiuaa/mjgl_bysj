@@ -122,6 +122,13 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-websocket</artifactId>
         </dependency>
+
+        <!-- Excel 导出（XLSX） -->
+        <dependency>
+            <groupId>org.apache.poi</groupId>
+            <artifactId>poi-ooxml</artifactId>
+            <version>5.5.1</version>
+        </dependency>
         <!-- 如果你使用了 Lombok，可以简化实体类代码 -->
         <dependency>
             <groupId>org.projectlombok</groupId>
@@ -137,6 +144,16 @@
                 <version>${spring-boot.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
+            </dependency>
+            <!--
+              Apache POI(>=5.5.0) 使用到 commons-compress 的 ZipArchiveOutputStream.putArchiveEntry(ZipArchiveEntry)。
+              由于项目里可能存在旧版 commons-compress 的传递依赖，运行时会触发 NoSuchMethodError。
+              这里强制统一版本，避免 Excel/XLSX 导出时崩溃。
+            -->
+            <dependency>
+                <groupId>org.apache.commons</groupId>
+                <artifactId>commons-compress</artifactId>
+                <version>1.28.0</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
@@ -159,7 +176,6 @@
                 <version>${spring-boot.version}</version>
                 <configuration>
                     <mainClass>com.zjb.mjgl.MjglApplication</mainClass>
-                    <skip>true</skip>
                 </configuration>
                 <executions>
                     <execution>

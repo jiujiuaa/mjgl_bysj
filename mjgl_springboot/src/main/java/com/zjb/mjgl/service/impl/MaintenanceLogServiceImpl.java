@@ -3,9 +3,11 @@ package com.zjb.mjgl.service.impl;
 import com.github.pagehelper.PageHelper;
 import com.github.pagehelper.PageInfo;
 import com.zjb.mjgl.common.Result;
+import com.zjb.mjgl.common.enums.MoldStatusEnum;
 import com.zjb.mjgl.common.enums.RoleEnum;
 import com.zjb.mjgl.mapper.MaintenanceLogMapper;
 import com.zjb.mjgl.mapper.MaintenanceReminderMapper;
+import com.zjb.mjgl.mapper.MoldsMapper;
 import com.zjb.mjgl.pojo.dto.BatchIdsDTO;
 import com.zjb.mjgl.pojo.dto.MaintenanceLogQueryParam;
 import com.zjb.mjgl.pojo.entity.MaintenanceLogs;
@@ -35,24 +37,41 @@ import java.util.Optional;
 public class MaintenanceLogServiceImpl implements MaintenanceLogService {
     private final MaintenanceLogMapper maintenanceLogMapper;
     private final MaintenanceReminderMapper maintenanceReminderMapper;
+    private final MoldsMapper moldsMapper;
     private final WebSocketMessageService webSocketMessageService;
     private final NotificationService notificationService;
     @Override
     public Result<String> create(MaintenanceLogs maintenanceLogs) {
+        com.zjb.mjgl.pojo.entity.User currentUser = UserUtils.getCurrentUserDetails();
+        if (currentUser == null) {
+            return Result.fail("未登录用户无法创建保养记录");
+        }
+        RoleEnum role = currentUser.getRole();
+        boolean canCreate = role == RoleEnum.ADMIN || role == RoleEnum.INSPECTOR || role == RoleEnum.MAINTENANCE;
+        if (!canCreate) {
+            return Result.fail("当前用户无创建保养记录权限");
+        }
+
         if (maintenanceLogs == null) {
             return Result.fail("插入失败，请重试");
         }
         if (maintenanceLogs.getMoldId() == null || maintenanceLogs.getPlanId() == null) {
             return Result.fail("模具和保养计划不能为空");
         }
+
+        // 待报废后禁止继续新增保养记录
+        Integer currentStatus = moldsMapper.getStatus(maintenanceLogs.getMoldId());
+        if (MoldStatusEnum.TO_BE_SCRAPPED.getCode().equals(currentStatus)) {
+            return Result.fail("模具已进入“待报废”，禁止新增保养记录");
+        }
+
         log.info("开始创建保养记录, moldId={}, planId={}", maintenanceLogs.getMoldId(), maintenanceLogs.getPlanId());
         maintenanceLogs.setId(IdUtil.fastUUID());
-        // 如果前端未传保养人，则默认当前登录用户
-        if (maintenanceLogs.getMaintainerId() == null) {
-            com.zjb.mjgl.pojo.entity.User currentUser = UserUtils.getCurrentUserDetails();
-            if (currentUser != null) {
-                maintenanceLogs.setMaintainerId(currentUser.getId());
-            }
+        // 保养人员只能为自己创建；管理员/巡查员可由前端指定保养人（为空则默认当前用户）
+        if (role == RoleEnum.MAINTENANCE) {
+            maintenanceLogs.setMaintainerId(currentUser.getId());
+        } else if (maintenanceLogs.getMaintainerId() == null) {
+            maintenanceLogs.setMaintainerId(currentUser.getId());
         }
         if (maintenanceLogs.getCreatedAt() == null) {
             maintenanceLogs.setCreatedAt(new java.util.Date());
@@ -69,11 +88,8 @@ public class MaintenanceLogServiceImpl implements MaintenanceLogService {
                 alert.setType("INFO");
                 alert.setBiz_type("MAINTENANCE_LOG");
                 alert.setTime(java.time.LocalDateTime.now());
-                com.zjb.mjgl.pojo.entity.User currentUser = UserUtils.getCurrentUserDetails();
-                if (currentUser != null) {
-                    alert.setSenderId(currentUser.getId());
-                    alert.setSenderName(currentUser.getUsername());
-                }
+                alert.setSenderId(currentUser.getId());
+                alert.setSenderName(currentUser.getUsername());
                 // 广播一份
                 webSocketMessageService.sendAlert(alert);
                 // 如果有保养人ID，再单播一份到该用户，并持久化一条通知
@@ -180,6 +196,13 @@ public class MaintenanceLogServiceImpl implements MaintenanceLogService {
 
     @Override
     public PageInfo<MaintenanceLogVO> queryByCondition(MaintenanceLogQueryParam param, int pageNum, int pageSize) {
+        // 保养人员默认只能查自己的记录
+        if (param != null && (param.getMaintainerId() == null || param.getMaintainerId().trim().isEmpty())) {
+            com.zjb.mjgl.pojo.entity.User currentUser = UserUtils.getCurrentUserDetails();
+            if (currentUser != null && currentUser.getRole() == RoleEnum.MAINTENANCE) {
+                param.setMaintainerId(currentUser.getId());
+            }
+        }
         PageHelper.startPage(pageNum, pageSize);
         return new PageInfo<>(maintenanceLogMapper.queryByCondition(param));
     }
@@ -189,6 +212,27 @@ public class MaintenanceLogServiceImpl implements MaintenanceLogService {
         if (id == null || id.trim().isEmpty()) {
             return Result.fail("id为空");
         }
+        com.zjb.mjgl.pojo.entity.User currentUser = UserUtils.getCurrentUserDetails();
+        if (currentUser == null) {
+            return Result.fail("未登录用户无法删除保养记录");
+        }
+        RoleEnum role = currentUser.getRole();
+        boolean canDelete = role == RoleEnum.ADMIN || role == RoleEnum.INSPECTOR || role == RoleEnum.MAINTENANCE;
+        if (!canDelete) {
+            return Result.fail("当前用户无权限删除保养记录");
+        }
+
+        MaintenanceLogs existing = maintenanceLogMapper.getById(id);
+        if (existing == null) {
+            return Result.fail("保养记录不存在");
+        }
+        if (role == RoleEnum.MAINTENANCE) {
+            String maintainerId = existing.getMaintainerId();
+            if (maintainerId == null || !maintainerId.equals(currentUser.getId())) {
+                return Result.fail("无权限删除该保养记录");
+            }
+        }
+
         log.info("删除保养记录, id={}", id);
         maintenanceLogMapper.deleteById(id);
         return Result.success();
@@ -209,6 +253,32 @@ public class MaintenanceLogServiceImpl implements MaintenanceLogService {
 
     @Override
     public Result<?> update(MaintenanceLogs maintenanceLogs) {
+        if (maintenanceLogs == null || maintenanceLogs.getId() == null || maintenanceLogs.getId().trim().isEmpty()) {
+            return Result.fail("保养记录ID不能为空");
+        }
+        com.zjb.mjgl.pojo.entity.User currentUser = UserUtils.getCurrentUserDetails();
+        if (currentUser == null) {
+            return Result.fail("未登录用户无法更新保养记录");
+        }
+        RoleEnum role = currentUser.getRole();
+        boolean canUpdate = role == RoleEnum.ADMIN || role == RoleEnum.INSPECTOR || role == RoleEnum.MAINTENANCE;
+        if (!canUpdate) {
+            return Result.fail("当前用户无权限更新保养记录");
+        }
+
+        MaintenanceLogs existing = maintenanceLogMapper.getById(maintenanceLogs.getId());
+        if (existing == null) {
+            return Result.fail("保养记录不存在");
+        }
+        if (role == RoleEnum.MAINTENANCE) {
+            String maintainerId = existing.getMaintainerId();
+            if (maintainerId == null || !maintainerId.equals(currentUser.getId())) {
+                return Result.fail("无权限更新该保养记录");
+            }
+            // 防止保养人员通过前端篡改保养人
+            maintenanceLogs.setMaintainerId(currentUser.getId());
+        }
+
         log.info("更新保养记录, id={}", maintenanceLogs.getId());
         maintenanceLogMapper.update(maintenanceLogs);
         return Result.success();

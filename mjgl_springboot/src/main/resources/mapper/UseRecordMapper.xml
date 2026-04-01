@@ -91,6 +91,15 @@
           AND status = 2
     </select>
 
+    <!-- 统计某模具下 status=2 且 usage_type 指定值的使用记录数量 -->
+    <select id="countInUseByMoldIdAndUsageType" resultType="int">
+        SELECT COUNT(1)
+        FROM mold_usage_records
+        WHERE mold_id = #{moldId}
+          AND status = 2
+          AND usage_type = #{usageType}
+    </select>
+
     <select id="getRecordById" parameterType="java.lang.String"
             resultType="com.zjb.mjgl.pojo.entity.MoldUsageRecords">
         SELECT
@@ -157,6 +166,9 @@
                 typeHandler="com.zjb.mjgl.typehandler.LocalDateTimeTypeHandler"/>
         <result column="usage_approval_status" property="usageApprovalStatus"/>
         <result column="usage_approval_comment" property="usageApprovalComment"/>
+        <result column="usage_approver_name" property="usageApproverName"/>
+        <result column="usage_approval_time" property="usageApprovalTime"
+                typeHandler="com.zjb.mjgl.typehandler.LocalDateTimeTypeHandler"/>
     </resultMap>
     <sql id="moldUseRecord">
         SELECT
@@ -189,6 +201,8 @@
             r.return_remarks,
             r.usage_approval_status,
             r.usage_approval_comment,
+            ua.real_name AS usage_approver_name,
+            r.usage_approval_time AS usage_approval_time,
             r.created_at,
             r.updated_at
     </sql>
@@ -198,6 +212,7 @@
         <include refid="moldUseRecord"></include>
         FROM mold_usage_records r
                  LEFT JOIN molds m ON r.mold_id = m.id
+                 LEFT JOIN users ua ON r.usage_approver_id = ua.id
         WHERE r.mold_id = #{moldId}
         ORDER BY r.created_at DESC
     </select>
@@ -207,6 +222,7 @@
         <include refid="moldUseRecord"></include>
         FROM mold_usage_records r
                  LEFT JOIN molds m ON r.mold_id = m.id
+                 LEFT JOIN users ua ON r.usage_approver_id = ua.id
         WHERE r.applicant_id = #{applicantId}
         ORDER BY r.created_at DESC
     </select>
@@ -216,6 +232,7 @@
         <include refid="moldUseRecord"></include>
         FROM mold_usage_records r
                  LEFT JOIN molds m ON r.mold_id = m.id
+                 LEFT JOIN users ua ON r.usage_approver_id = ua.id
         WHERE r.mold_id = #{moldId}
           AND r.applicant_id = #{applicantId}
         ORDER BY r.created_at DESC
@@ -225,6 +242,7 @@
         <include refid="moldUseRecord"></include>
         FROM mold_usage_records r
         LEFT JOIN molds m ON r.mold_id = m.id
+        LEFT JOIN users ua ON r.usage_approver_id = ua.id
         ORDER BY r.created_at DESC
     </select>
 

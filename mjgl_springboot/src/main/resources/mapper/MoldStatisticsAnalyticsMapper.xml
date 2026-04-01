@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zjb.mjgl.mapper.MoldStatisticsAnalyticsMapper">
+
+    <select id="listRepairDurationStats" resultType="com.zjb.mjgl.pojo.vo.MoldRepairDurationStatVO">
+        SELECT
+            mold_id AS moldId,
+            COUNT(1) AS repairFrequency,
+            AVG(TIMESTAMPDIFF(SECOND, start_time, end_time) / 3600.0) AS avgRepairDurationHours
+        FROM repair_records
+        WHERE
+            start_time &gt;= #{start}
+            AND start_time &lt;= #{end}
+            AND status != 1
+            AND start_time IS NOT NULL
+            <if test="moldIds != null and moldIds.size() > 0">
+                AND mold_id IN
+                <foreach collection="moldIds" item="moldId" open="(" separator="," close=")">
+                    #{moldId}
+                </foreach>
+            </if>
+        GROUP BY mold_id
+    </select>
+
+    <select id="listUsageTrends" resultType="com.zjb.mjgl.pojo.vo.MoldUsageTrendPointVO">
+        SELECT
+            <choose>
+                <when test="bucketType != null and bucketType == 'DAY'">
+                    DATE_FORMAT(actual_end_time, '%Y-%m-%d')
+                </when>
+                <when test="bucketType != null and bucketType == 'WEEK'">
+                    DATE_FORMAT(
+                            DATE_SUB(DATE(actual_end_time), INTERVAL WEEKDAY(DATE(actual_end_time)) DAY),
+                            '%Y-%m-%d'
+                    )
+                </when>
+                <otherwise>
+                    DATE_FORMAT(actual_end_time, '%Y-%m-01')
+                </otherwise>
+            </choose>
+            AS bucketKey,
+            COUNT(1) AS usageCount,
+            SUM(TIMESTAMPDIFF(SECOND, actual_start_time, actual_end_time) / 3600.0) AS productionHours
+        FROM mold_usage_records
+        WHERE
+            status = 3
+            AND actual_start_time IS NOT NULL
+            AND actual_end_time IS NOT NULL
+            AND actual_end_time &gt;= #{start}
+            AND actual_end_time &lt;= #{end}
+            <if test="moldId != null and moldId != ''">
+                AND mold_id = #{moldId}
+            </if>
+        GROUP BY bucketKey
+        ORDER BY bucketKey
+    </select>
+
+    <select id="listRepairTrends" resultType="com.zjb.mjgl.pojo.vo.MoldRepairTrendPointVO">
+        SELECT
+            <choose>
+                <when test="bucketType != null and bucketType == 'DAY'">
+                    DATE_FORMAT(start_time, '%Y-%m-%d')
+                </when>
+                <when test="bucketType != null and bucketType == 'WEEK'">
+                    DATE_FORMAT(
+                            DATE_SUB(DATE(start_time), INTERVAL WEEKDAY(DATE(start_time)) DAY),
+                            '%Y-%m-%d'
+                    )
+                </when>
+                <otherwise>
+                    DATE_FORMAT(start_time, '%Y-%m-01')
+                </otherwise>
+            </choose>
+            AS bucketKey,
+            COUNT(1) AS repairCount,
+            AVG(TIMESTAMPDIFF(SECOND, start_time, end_time) / 3600.0) AS avgRepairDurationHours
+        FROM repair_records
+        WHERE
+            status != 1
+            AND start_time IS NOT NULL
+            AND start_time &gt;= #{start}
+            AND start_time &lt;= #{end}
+            <if test="moldId != null and moldId != ''">
+                AND mold_id = #{moldId}
+            </if>
+        GROUP BY bucketKey
+        ORDER BY bucketKey
+    </select>
+
+    <select id="listMaintenanceTrends" resultType="com.zjb.mjgl.pojo.vo.MoldMaintenanceTrendPointVO">
+        SELECT
+            <choose>
+                <when test="bucketType != null and bucketType == 'DAY'">
+                    DATE_FORMAT(COALESCE(actual_end_time, created_at), '%Y-%m-%d')
+                </when>
+                <when test="bucketType != null and bucketType == 'WEEK'">
+                    DATE_FORMAT(
+                            DATE_SUB(DATE(COALESCE(actual_end_time, created_at)), INTERVAL WEEKDAY(DATE(COALESCE(actual_end_time, created_at))) DAY),
+                            '%Y-%m-%d'
+                    )
+                </when>
+                <otherwise>
+                    DATE_FORMAT(COALESCE(actual_end_time, created_at), '%Y-%m-01')
+                </otherwise>
+            </choose>
+            AS bucketKey,
+            COUNT(1) AS maintenanceCount
+        FROM maintenance_logs
+        WHERE
+            COALESCE(actual_end_time, created_at) &gt;= #{start}
+            AND COALESCE(actual_end_time, created_at) &lt;= #{end}
+            <if test="moldId != null and moldId != ''">
+                AND mold_id = #{moldId}
+            </if>
+        GROUP BY bucketKey
+        ORDER BY bucketKey
+    </select>
+
+</mapper>
+

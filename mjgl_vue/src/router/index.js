@@ -1,12 +1,19 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { canAccessPathByRole } from '@/constants/permissions'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
     {
       path: '/',
-      redirect: '/login',
+      redirect: '/home',
+    },
+    {
+      path: '/home',
+      name: 'Home',
+      component: () => import('@/views/Home.vue'),
+      meta: { requiresAuth: true },
     },
     {
       path: '/login',
@@ -26,9 +33,9 @@ const router = createRouter({
       meta: { requiresAuth: true },
     },
     {
-      path: '/file-manage',
-      name: 'FileManage',
-      component: () => import('@/views/FileManage.vue'),
+      path: '/profile',
+      name: 'UserProfile',
+      component: () => import('@/views/UserProfile.vue'),
       meta: { requiresAuth: true },
     },
     {
@@ -41,6 +48,12 @@ const router = createRouter({
       path: '/mold-use-records',
       name: 'MoldUseRecords',
       component: () => import('@/views/MoldUseRecords.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/mold-scrap-records',
+      name: 'MoldScrapApplications',
+      component: () => import('@/views/MoldScrapApplications.vue'),
       meta: { requiresAuth: true },
     },
     {
@@ -104,6 +117,18 @@ const router = createRouter({
       meta: { requiresAuth: true },
     },
     {
+      path: '/mold-statistics',
+      name: 'MoldStatistics',
+      component: () => import('@/views/MoldStatistics.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/approval-center',
+      name: 'ApprovalCenter',
+      component: () => import('@/views/ApprovalCenter.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
       path: '/monitoring-manual',
       redirect: '/monitoring-temperature',
     },
@@ -116,7 +141,7 @@ const router = createRouter({
   ],
 })
 
-// 路由守卫 - 仅检查登录状态（权限后端控制，前端只做显示/隐藏）
+// 路由守卫 - 检查登录状态与基础角色权限
 router.beforeEach((to, from, next) => {
   const authStore = useAuthStore()
 
@@ -126,10 +151,18 @@ router.beforeEach((to, from, next) => {
     return
   }
 
-  // 已登录访问登录页，统一跳到用户管理（是否有权限由后端 + 页面自身控制）
+  // 已登录访问登录页，统一跳到首页
   if (to.path === '/login' && authStore.isAuthenticated) {
-    next('/user-management')
+    next('/home')
     return
+  }
+
+  if (to.meta.requiresAuth && authStore.isAuthenticated) {
+    const canAccess = canAccessPathByRole(to.path, authStore.role)
+    if (!canAccess) {
+      next('/home')
+      return
+    }
   }
 
   next()

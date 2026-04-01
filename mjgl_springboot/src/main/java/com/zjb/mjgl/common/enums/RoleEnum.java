@@ -6,6 +6,8 @@ import lombok.Getter;
 public enum RoleEnum {
     ADMIN("ADMIN", "管理员"),
     INSPECTOR("INSPECTOR", "巡查员"),
+    PRODUCTION("PRODUCTION", "生产人员"),
+    MAINTENANCE("MAINTENANCE", "保养人员"),
     OPERATOR("OPERATOR", "操作员"),
     USER("USER", "普通用户");
 

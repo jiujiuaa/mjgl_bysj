@@ -7,18 +7,21 @@ import io.minio.messages.DeleteError;
 import io.minio.messages.DeleteObject;
 import io.minio.messages.Item;
 import lombok.SneakyThrows;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
 
 
+import javax.annotation.PostConstruct;
 import java.io.InputStream;
 import java.io.ByteArrayInputStream;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Component
 public class MinioUtil {
 
@@ -28,21 +31,52 @@ public class MinioUtil {
     @Value("${minio.bucket-name}")
     private String defaultBucketName;
 
+    @PostConstruct
+    public void ensureDefaultBucketOnStartup() {
+        try {
+            makeBucket(defaultBucketName);
+            log.info("MinIO 默认桶已就绪: {}", defaultBucketName);
+        } catch (Exception e) {
+            // 不中断应用启动，避免 MinIO 临时不可用导致服务无法拉起
+            log.warn("MinIO 默认桶初始化失败, bucket={}, err={}", defaultBucketName, e.getMessage());
+        }
+    }
+
     /**
     * 判断桶是否存在
     **/
-    @SneakyThrows
     public boolean bucketExists(String bucketName) {
-        return minioClient.bucketExists(BucketExistsArgs.builder().bucket(bucketName).build());
+        if (bucketName == null || bucketName.trim().isEmpty()) {
+            return false;
+        }
+        try {
+            return minioClient.bucketExists(BucketExistsArgs.builder().bucket(bucketName).build());
+        } catch (Exception e) {
+            // MinIO 在桶不存在时可能抛 NoSuchBucket，统一按“不存在”处理
+            String msg = Optional.ofNullable(e.getMessage()).orElse("");
+            if (msg.contains("NoSuchBucket") || msg.contains("does not exist")) {
+                return false;
+            }
+            throw new RuntimeException("检查 MinIO 桶存在性失败: " + bucketName, e);
+        }
     }
 
     /**
      * 创建桶
      * **/
-    @SneakyThrows
     public void makeBucket(String bucketName) {
-        if(!bucketExists(bucketName)){
-            minioClient.makeBucket(MakeBucketArgs.builder().bucket(bucketName).build());
+        if (bucketName == null || bucketName.trim().isEmpty()) {
+            throw new IllegalArgumentException("bucketName不能为空");
+        }
+        if (!bucketExists(bucketName)) {
+            try {
+                minioClient.makeBucket(MakeBucketArgs.builder().bucket(bucketName).build());
+            } catch (Exception e) {
+                // 并发创建时，如果已经被其它实例创建，则视为成功
+                if (!bucketExists(bucketName)) {
+                    throw new RuntimeException("创建 MinIO 桶失败: " + bucketName, e);
+                }
+            }
         }
     }
     /**

@@ -42,7 +42,20 @@ public class UseRecordServiceImpl implements UseRecordService {
     @Resource
     private UserService userService;
     @Override
-    public boolean createRecord(MoldUsageRecordDTO moldUsageRecordDTO) {
+    public Result<Void> createRecord(MoldUsageRecordDTO moldUsageRecordDTO) {
+        com.zjb.mjgl.pojo.entity.User currentUser = UserUtils.getCurrentUserDetails();
+        if (currentUser == null) {
+            return Result.fail("未登录用户无法创建使用记录");
+        }
+        RoleEnum role = currentUser.getRole();
+        boolean canCreate = role == RoleEnum.ADMIN || role == RoleEnum.INSPECTOR || role == RoleEnum.PRODUCTION;
+        if (!canCreate) {
+            return Result.fail("当前用户无创建模具使用/借出记录权限");
+        }
+        if (moldUsageRecordDTO == null || moldUsageRecordDTO.getMoldId() == null) {
+            return Result.fail("模具ID不能为空");
+        }
+
         // 确保有主键 ID
         moldUsageRecordDTO.setId(
                 Optional.ofNullable(moldUsageRecordDTO.getId())
@@ -50,54 +63,70 @@ public class UseRecordServiceImpl implements UseRecordService {
         );
 
         // 填充当前登录用户作为申请人（ID + 名称）
-        Optional.ofNullable(UserUtils.getCurrentUserDetails()).ifPresent(user -> {
-            moldUsageRecordDTO.setApplicantId(user.getId());
-            // 这里优先使用真实姓名，其次使用用户名
-            moldUsageRecordDTO.setApplicantName(
-                    Optional.ofNullable(user.getRealName())
-                            .filter(name -> !name.trim().isEmpty())
-                            .orElse(user.getUsername())
-            );
-        });
+        moldUsageRecordDTO.setApplicantId(currentUser.getId());
+        // 这里优先使用真实姓名，其次使用用户名
+        moldUsageRecordDTO.setApplicantName(
+                Optional.ofNullable(currentUser.getRealName())
+                        .filter(name -> !name.trim().isEmpty())
+                        .orElse(currentUser.getUsername())
+        );
 
         int status = moldsMapper.getStatus(moldUsageRecordDTO.getMoldId());
         if (status != MoldStatusEnum.IN_STOCK.getCode()) {
-            return false;
+            return Result.fail("模具状态不允许借出");
         }
-        return useRecordMapper.insert(moldUsageRecordDTO) > 0;
+        int rows = useRecordMapper.insert(moldUsageRecordDTO);
+        return rows > 0 ? Result.success() : Result.fail("创建模具使用/借出记录失败");
     }
 
 
 
     @Override
     public Result<String> updateStatus(String id, Integer status) {
-        // 使用记录状态含义：
-        // 1 = 模具在库，2 = 模具使用中，3 = 模具使用完成
+        // 使用记录状态含义（mold_usage_records.status）：
+        // 1 = 在库/待处理，2 = 使用中（含内部生产/外借进行中），3 = 使用完成（归还/结束）
         if (status == null || status < 1 || status > 3) {
             return Result.fail("不支持的使用记录状态");
         }
 
-        return Optional.ofNullable(useRecordMapper.getRecordById(id))
-                .map(record -> {
-                    // 根据使用记录状态映射到模具当前状态
-                    int moldStatus;
-                    if (status == 2) {
-                        // 使用中 -> 模具状态 = 使用中
-                        moldStatus = MoldStatusEnum.IN_USE.getCode();
-                    } else {
-                        // 1 在库 / 3 使用完成 -> 模具状态都视为“在库”
-                        moldStatus = MoldStatusEnum.IN_STOCK.getCode();
-                    }
+        com.zjb.mjgl.pojo.entity.User currentUser = UserUtils.getCurrentUserDetails();
+        if (currentUser == null) {
+            return Result.fail("未登录用户无法更新状态");
+        }
+        RoleEnum role = currentUser.getRole();
+        boolean isManager = role == RoleEnum.ADMIN || role == RoleEnum.INSPECTOR;
+        boolean canUpdate = isManager || role == RoleEnum.PRODUCTION;
+        if (!canUpdate) {
+            return Result.fail("当前用户无权限更新使用记录状态");
+        }
 
-                    int moldRows = moldsMapper.updateStatus(record.getMoldId(), moldStatus);
-                    int recordRows = useRecordMapper.updateStatus(id, status);
-                    boolean success = moldRows > 0 && recordRows > 0;
-                    if (success && status != null && status == 3) {
-                        notifyAdminsUsageNeedApproval(record.getMoldId(), id);
-                    }
-                    return new Result<>("OK", success, success ? "更新成功" : "更新失败");
-                })
-                .orElseGet(() -> Result.fail("使用记录不存在"));
+        MoldUsageRecords record = useRecordMapper.getRecordById(id);
+        if (record == null) {
+            return Result.fail("使用记录不存在");
+        }
+        if (!isManager) {
+            // 生产人员只能更新自己创建的记录
+            String applicantId = record.getApplicantId();
+            if (applicantId == null || !applicantId.equals(currentUser.getId())) {
+                return Result.fail("无权限更新该记录");
+            }
+        }
+
+        // 先更新使用记录状态，再根据“剩余在用记录”计算模具状态，避免归还时仍统计到旧状态。
+        int recordRows = useRecordMapper.updateStatus(id, status);
+        if (recordRows <= 0) {
+            return Result.fail("更新使用记录状态失败");
+        }
+
+        // 根据 usage records 的“剩余 status=2”推导 molds.current_status
+        int moldStatus = computeMoldStatusFromUsage(record.getMoldId());
+
+        int moldRows = moldsMapper.updateStatus(record.getMoldId(), moldStatus);
+        boolean success = moldRows > 0;
+        if (success && status == 3) {
+            notifyAdminsUsageNeedApproval(record.getMoldId(), id);
+        }
+        return new Result<>("OK", success, success ? "更新成功" : "更新失败");
     }
 
     /**
@@ -197,32 +226,47 @@ public class UseRecordServiceImpl implements UseRecordService {
             return Result.fail("记录ID不能为空");
         }
 
-        return Optional.ofNullable(useRecordMapper.getRecordById(id))
-                .map(record -> {
-                    String moldId = record.getMoldId();
+        com.zjb.mjgl.pojo.entity.User currentUser = UserUtils.getCurrentUserDetails();
+        if (currentUser == null) {
+            return Result.fail("未登录用户无法删除记录");
+        }
+        RoleEnum role = currentUser.getRole();
+        boolean isManager = role == RoleEnum.ADMIN || role == RoleEnum.INSPECTOR;
+        boolean canDelete = isManager || role == RoleEnum.PRODUCTION;
+        if (!canDelete) {
+            return Result.fail("当前用户无权限删除使用记录");
+        }
 
-                    int deletedRows = useRecordMapper.deleteById(id);
-                    if (deletedRows <= 0) {
-                        return Result.fail("删除使用记录失败");
-                    }
+        MoldUsageRecords record = useRecordMapper.getRecordById(id);
+        if (record == null) {
+            return Result.fail("使用记录不存在");
+        }
+        if (!isManager) {
+            String applicantId = record.getApplicantId();
+            if (applicantId == null || !applicantId.equals(currentUser.getId())) {
+                return Result.fail("无权限删除该记录");
+            }
+        }
 
-                    // 同步更新模具状态：
-                    // - 如果该模具仍然存在状态为“使用中”(2) 的使用记录，则模具保持/设为“使用中”
-                    // - 否则，将模具状态设为“在库”(1)
-                    Optional.ofNullable(moldId)
-                            .map(String::trim)
-                            .filter(s -> !s.isEmpty())
-                            .ifPresent(mid -> {
-                                int inUseCount = useRecordMapper.countInUseByMoldId(mid);
-                                int newMoldStatus = inUseCount > 0
-                                        ? MoldStatusEnum.IN_USE.getCode()
-                                        : MoldStatusEnum.IN_STOCK.getCode();
-                                moldsMapper.updateStatus(mid, newMoldStatus);
-                            });
+        String moldId = record.getMoldId();
+        int deletedRows = useRecordMapper.deleteById(id);
+        if (deletedRows <= 0) {
+            return Result.fail("删除使用记录失败");
+        }
 
-                    return Result.success();
-                })
-                .orElseGet(() -> Result.fail("使用记录不存在"));
+        // 同步更新模具状态：
+        // - 如果该模具仍然存在 status=2 且 usage_type=2 的使用记录，则模具保持/设为“外借”(4)
+        // - 否则若仍存在 status=2 且 usage_type!=2 的使用记录，则模具保持/设为“使用中”(2)
+        // - 否则，将模具状态设为“在库”(1)
+        Optional.ofNullable(moldId)
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .ifPresent(mid -> {
+                    int newMoldStatus = computeMoldStatusFromUsage(mid);
+                    moldsMapper.updateStatus(mid, newMoldStatus);
+                });
+
+        return Result.success();
     }
 
     @Override
@@ -249,6 +293,25 @@ public class UseRecordServiceImpl implements UseRecordService {
         if (existingRecord == null) {
             return Result.fail("使用记录不存在");
         }
+
+        com.zjb.mjgl.pojo.entity.User currentUser = UserUtils.getCurrentUserDetails();
+        if (currentUser == null) {
+            return Result.fail("未登录用户无法更新记录");
+        }
+        RoleEnum role = currentUser.getRole();
+        boolean isManager = role == RoleEnum.ADMIN || role == RoleEnum.INSPECTOR;
+        boolean canUpdate = isManager || role == RoleEnum.PRODUCTION;
+        if (!canUpdate) {
+            return Result.fail("当前用户无权限更新使用记录");
+        }
+        if (!isManager) {
+            // 生产人员只能更新自己创建的记录
+            String applicantId = existingRecord.getApplicantId();
+            if (applicantId == null || !applicantId.equals(currentUser.getId())) {
+                return Result.fail("无权限更新该记录");
+            }
+        }
+
         Molds mold = moldsMapper.selectById(moldId);
         if (mold == null) {
             return Result.fail("模具不存在");
@@ -311,5 +374,30 @@ public class UseRecordServiceImpl implements UseRecordService {
     public static Long diffHours(LocalDateTime start, LocalDateTime end) {
         if (start == null || end == null) return null;
         return ChronoUnit.HOURS.between(start, end);
+    }
+
+    /**
+     * 根据该模具现有 usage records 重新推导 molds.current_status（只考虑 usage 维度）
+     * - status=2 且 usage_type=2 => 外借(4)
+     * - status=2 且 usage_type!=2 => 使用中(2)
+     * - 否则 => 在库(1)
+     */
+    private int computeMoldStatusFromUsage(String moldId) {
+        if (moldId == null) return MoldStatusEnum.IN_STOCK.getCode();
+        String trimmed = moldId.trim();
+        if (trimmed.isEmpty()) return MoldStatusEnum.IN_STOCK.getCode();
+
+        int lentOutCount = useRecordMapper.countInUseByMoldIdAndUsageType(trimmed, 2);
+        if (lentOutCount > 0) {
+            return MoldStatusEnum.LENT_OUT.getCode();
+        }
+
+        // 内部生产(1) / 试模(3) 都按“使用中(2)”处理
+        int inUseCount =
+                useRecordMapper.countInUseByMoldIdAndUsageType(trimmed, 1)
+                        + useRecordMapper.countInUseByMoldIdAndUsageType(trimmed, 3);
+        return inUseCount > 0
+                ? MoldStatusEnum.IN_USE.getCode()
+                : MoldStatusEnum.IN_STOCK.getCode();
     }
 }

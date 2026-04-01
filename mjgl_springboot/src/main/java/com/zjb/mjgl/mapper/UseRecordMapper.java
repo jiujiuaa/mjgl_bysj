@@ -31,6 +31,12 @@ public interface UseRecordMapper {
      */
     int countInUseByMoldId(@Param("moldId") String moldId);
 
+    /**
+     * 统计某个模具下：status=2（使用中）且 usage_type=指定值 的记录数量
+     */
+    int countInUseByMoldIdAndUsageType(@Param("moldId") String moldId,
+                                        @Param("usageType") int usageType);
+
     int updateStatus(@Param("id") String id, @Param("status") int status);
 
     /**

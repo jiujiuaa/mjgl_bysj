@@ -146,6 +146,26 @@
 
     </select>
 
+    <select id="getById" parameterType="java.lang.String" resultMap="MaintenanceLogsMap">
+        select id,
+               mold_id,
+               plan_id,
+               maintainer_id,
+               maintenance_type,
+               details,
+               actual_start_time,
+               actual_end_time,
+               cost,
+               file_ids,
+               created_at,
+               approval_status,
+               approval_comment,
+               approver_id,
+               approval_time
+        from maintenance_logs
+        where id = #{id}
+    </select>
+
     <!-- 条件查询：配合 PageHelper 分页，返回带名称的 VO -->
     <select id="queryByCondition" resultMap="MaintenanceLogVOMap">
         select

@@ -10,6 +10,16 @@ public interface MoldQrcodesMapper {
 
     int insertQrcode(MoldQrcodes qrcode);
 
+    /**
+     * 根据二维码唯一内容（codeId）查询。
+     */
+    MoldQrcodes selectById(String id);
+
+    /**
+     * 根据二维码唯一内容（codeId）更新是否有效状态。
+     */
+    int updateIsActiveById(String id, Integer isActive);
+
     int deleteByMoldId(String moldId);
 
     /**

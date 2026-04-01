@@ -7,6 +7,7 @@ import com.zjb.mjgl.pojo.vo.AlertRecordVO;
 import com.zjb.mjgl.service.AlertRecordService;
 import com.zjb.mjgl.service.AlertRuleEngineService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Optional;
@@ -17,6 +18,7 @@ import java.util.Optional;
 @RestController
 @RequestMapping("/api/alerts")
 @RequiredArgsConstructor
+@PreAuthorize("isAuthenticated()")
 public class AlertRecordController {
 
     private final AlertRecordService alertRecordService;
@@ -46,6 +48,7 @@ public class AlertRecordController {
      * 将报警标记为「已解决」
      */
     @PutMapping("/{id}/resolve")
+    @PreAuthorize("hasAnyRole('ADMIN','INSPECTOR')")
     public Result<Void> resolve(@PathVariable String id, @RequestParam(required = false) String remark) {
         return alertRecordService.resolve(id, remark);
     }
@@ -54,6 +57,7 @@ public class AlertRecordController {
      * 将报警标记为「已忽略」
      */
     @PutMapping("/{id}/ignore")
+    @PreAuthorize("hasAnyRole('ADMIN','INSPECTOR')")
     public Result<Void> ignore(@PathVariable String id, @RequestParam(required = false) String remark) {
         return alertRecordService.ignore(id, remark);
     }
@@ -62,6 +66,7 @@ public class AlertRecordController {
      * 手动触发一次智能预警规则引擎（供管理员或定时任务调用）
      */
     @PostMapping("/run-rules")
+    @PreAuthorize("hasRole('ADMIN')")
     public Result<Void> runRules() {
         alertRuleEngineService.runAllRules();
         return Result.success();

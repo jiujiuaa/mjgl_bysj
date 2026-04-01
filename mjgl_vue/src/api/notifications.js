@@ -7,3 +7,6 @@ export const fetchAllNotifications = () => request.get('/api/notifications/all')
 export const markNotificationRead = (id) =>
   request.post(`/api/notifications/${id}/read`)
 
+export const markAllNotificationsRead = () =>
+  request.post('/api/notifications/read-all')
+

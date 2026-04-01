@@ -2,11 +2,16 @@
 import { RouterView, useRouter, useRoute } from 'vue-router'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useAuthStore } from '@/stores/auth'
-import { fetchUnreadNotifications, markNotificationRead } from '@/api/notifications'
+import {
+  fetchUnreadNotifications,
+  markAllNotificationsRead,
+  markNotificationRead,
+} from '@/api/notifications'
 
 const router = useRouter()
 const route = useRoute()
 const authStore = useAuthStore()
+const canSendAlert = computed(() => authStore.canAccessPath('/alert-test'))
 
 // 登录页不显示右上角用户信息，其它页面且已登录时显示
 const showGlobalHeader = computed(() => authStore.isAuthenticated && route.path !== '/login')
@@ -14,6 +19,13 @@ const showGlobalHeader = computed(() => authStore.isAuthenticated && route.path 
 const handleLogout = async () => {
   await authStore.logout()
   router.push('/login')
+}
+
+const goUserProfile = () => {
+  if (!authStore.isAuthenticated) {
+    return
+  }
+  router.push('/profile')
 }
 
 // 顶部右上角小铃铛相关状态（仅展示通知，不发送）
@@ -24,7 +36,7 @@ const unreadCount = computed(() => notifications.value.length)
 
 const goAlertTest = () => {
   // 只允许已登录用户跳转，通常也只给管理员用
-  if (!authStore.isAuthenticated) {
+  if (!authStore.isAuthenticated || !canSendAlert.value) {
     return
   }
   router.push('/alert-test')
@@ -66,6 +78,17 @@ const handleNotificationMarkRead = async (n, idx) => {
     // 忽略错误
   } finally {
     notifications.value.splice(idx, 1)
+  }
+}
+
+const handleMarkAllNotificationsRead = async () => {
+  if (!notifications.value.length) return
+  try {
+    await markAllNotificationsRead()
+  } catch (e) {
+    // 忽略错误
+  } finally {
+    notifications.value = []
   }
 }
 
@@ -138,23 +161,28 @@ onUnmounted(() => {
     <header v-if="showGlobalHeader" class="global-header">
       <div class="global-header-right">
         <button
-          v-if="authStore.isAuthenticated"
+          v-if="authStore.isAuthenticated && canSendAlert"
           type="button"
           class="global-header-send"
           title="发送告警 / 消息"
           @click="goAlertTest"
         >
-          📢
+          <img class="send-icon" src="/通知.png" alt="发送告警" />
         </button>
         <div class="global-header-bell" @click.stop="toggleBellDropdown">
-          <span class="bell-icon">🔔</span>
+          <img class="bell-icon" src="/消息通知.png" alt="通知" />
           <span v-if="unreadCount > 0" class="bell-badge">{{ unreadCount }}</span>
           <div v-if="showBellDropdown" class="bell-dropdown">
             <div class="bell-dropdown-header">
               <span>未读通知 ({{ unreadCount }})</span>
-              <button class="bell-refresh" type="button" @click.stop="loadNotifications">
-                刷新
-              </button>
+              <div class="bell-dropdown-actions">
+                <button class="bell-read-all" type="button" @click.stop="handleMarkAllNotificationsRead">
+                  全部已读
+                </button>
+                <button class="bell-refresh" type="button" @click.stop="loadNotifications">
+                  刷新
+                </button>
+              </div>
             </div>
             <div v-if="loadingNotifications" class="bell-dropdown-empty">加载中...</div>
             <div v-else-if="unreadCount === 0" class="bell-dropdown-empty">暂无未读通知</div>
@@ -182,7 +210,9 @@ onUnmounted(() => {
             </ul>
           </div>
         </div>
-        <span class="global-header-username">{{ authStore.username }}</span>
+        <button class="global-header-profile" type="button" title="编辑个人资料" @click="goUserProfile">
+          <span class="global-header-username">{{ authStore.username }}</span>
+        </button>
         <button class="global-header-logout" @click="handleLogout">退出</button>
       </div>
     </header>
@@ -250,8 +280,6 @@ body {
   border: none;
   background: transparent;
   cursor: pointer;
-  font-size: 18px;
-  line-height: 1;
   padding: 4px;
   border-radius: 999px;
   transition: background 0.2s, transform 0.1s;
@@ -269,10 +297,25 @@ body {
 .global-header-bell {
   position: relative;
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 32px;
 }
 
 .bell-icon {
-  font-size: 18px;
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+  filter: contrast(1.25) saturate(1.1);
+}
+
+.send-icon {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+  display: block;
+  filter: contrast(1.25) saturate(1.1);
 }
 
 .bell-badge {
@@ -312,6 +355,20 @@ body {
   border-bottom: 1px solid #e5e7eb;
   font-size: 13px;
   color: #374151;
+}
+
+.bell-dropdown-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.bell-read-all {
+  border: none;
+  background: transparent;
+  font-size: 12px;
+  color: #2563eb;
+  cursor: pointer;
 }
 
 .bell-refresh {
@@ -391,6 +448,20 @@ body {
   color: #374151;
 }
 
+.global-header-profile {
+  border: 1px solid transparent;
+  background: transparent;
+  border-radius: 6px;
+  padding: 4px 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.global-header-profile:hover {
+  background: #f3f4f6;
+  border-color: #d1d5db;
+}
+
 .global-header-logout {
   padding: 6px 14px;
   border-radius: 4px;
@@ -442,5 +513,55 @@ body {
 .fade-enter-from,
 .fade-leave-to {
   opacity: 0;
+}
+
+/* 统一替换旧版 emoji 图标 */
+span.btn-icon {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  font-size: 0 !important;
+  color: transparent !important;
+  background: url('/新建.png') center/contain no-repeat;
+  vertical-align: middle;
+}
+
+span.message-icon {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  font-size: 0 !important;
+  color: transparent !important;
+  background: url('/消息通知.png') center/contain no-repeat;
+  vertical-align: middle;
+}
+
+.success-message span.message-icon {
+  background-image: url('/查看.png');
+}
+
+.error-message span.message-icon {
+  background-image: url('/消息通知.png');
+}
+
+.confirm-icon.danger {
+  font-size: 0 !important;
+  color: transparent !important;
+  background-color: #fee2e2 !important;
+  background-image: url('/清除筛选.png') !important;
+  background-repeat: no-repeat !important;
+  background-position: center !important;
+  background-size: 28px 28px !important;
+}
+
+span.stat-icon,
+.welcome-icon {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  font-size: 0 !important;
+  color: transparent !important;
+  background: url('/项目总览.png') center/contain no-repeat;
+  vertical-align: middle;
 }
 </style>

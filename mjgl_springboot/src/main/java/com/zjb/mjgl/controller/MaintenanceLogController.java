@@ -8,6 +8,7 @@ import com.zjb.mjgl.pojo.entity.MaintenanceLogs;
 import com.zjb.mjgl.pojo.vo.MaintenanceLogVO;
 import com.zjb.mjgl.service.MaintenanceLogService;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
@@ -16,6 +17,7 @@ import java.util.Optional;
 @Slf4j
 @RestController
 @RequestMapping("/api/mainlog")
+@PreAuthorize("isAuthenticated()")
 public class MaintenanceLogController {
 
     @Resource
@@ -78,6 +80,7 @@ public class MaintenanceLogController {
 
     /** 保养记录合理性审批（仅 ADMIN） */
     @PostMapping("/log/{id}/approval")
+    @PreAuthorize("hasRole('ADMIN')")
     public Result<?> approval(@PathVariable String id, @RequestBody java.util.Map<String, Object> body) {
         Integer status = null;
         if (body != null && body.get("status") instanceof Number) {

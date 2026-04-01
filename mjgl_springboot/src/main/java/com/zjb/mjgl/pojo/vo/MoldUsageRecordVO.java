@@ -46,4 +46,8 @@ public class MoldUsageRecordVO {
      */
     private Integer usageApprovalStatus;
     private String usageApprovalComment;
+
+    // === 审批人/审批时间（用于“时间线”展示）===
+    private String usageApproverName;
+    private LocalDateTime usageApprovalTime;
 }

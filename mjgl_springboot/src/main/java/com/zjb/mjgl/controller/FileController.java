@@ -8,6 +8,7 @@ import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
@@ -20,6 +21,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/files")
 @Slf4j
+@PreAuthorize("isAuthenticated()")
 public class FileController {
 
 
@@ -35,10 +37,15 @@ public class FileController {
     @ApiOperation("上传文件（支持多选）")
     @PostMapping("/upload")
     public Result<List<FileVO>> upload(@Valid @ModelAttribute FileUploadParam param) {
-        log.info("收到文件上传请求, bizType={}, bizId={}, fileType={}, 文件数量={}",
-                param.getBizType(), param.getBizId(), param.getFileType(),
-                param.getFiles() != null ? param.getFiles().size() : 0);
-        return  Result.success(filesService.upload(param));
+        try {
+            log.info("收到文件上传请求, bizType={}, bizId={}, fileType={}, 文件数量={}",
+                    param.getBizType(), param.getBizId(), param.getFileType(),
+                    param.getFiles() != null ? param.getFiles().size() : 0);
+            return  Result.success(filesService.upload(param));
+        } catch (Exception e) {
+            log.error("文件上传异常, bizType={}, bizId={}", param == null ? null : param.getBizType(), param == null ? null : param.getBizId(), e);
+            return Result.fail("文件上传失败: " + e.getMessage());
+        }
     }
 
     /**
@@ -50,9 +57,14 @@ public class FileController {
     @ApiOperation("删除文件")
     @DeleteMapping("/delete")
     public Result<Void> delete(@RequestBody List<String> fileIds) {
-        log.info("收到删除文件请求, 数量={}", fileIds != null ? fileIds.size() : 0);
-        filesService.delete(fileIds);
-        return Result.success();
+        try {
+            log.info("收到删除文件请求, 数量={}", fileIds != null ? fileIds.size() : 0);
+            filesService.delete(fileIds);
+            return Result.success();
+        } catch (Exception e) {
+            log.error("删除文件异常, 数量={}", fileIds != null ? fileIds.size() : 0, e);
+            return Result.fail("删除文件失败: " + e.getMessage());
+        }
     }
 
     /**
@@ -61,9 +73,14 @@ public class FileController {
     @ApiOperation("获取文件预览URL")
     @GetMapping("/preview/{id}")
     public Result<String> preview(@PathVariable String id) {
-        log.info("收到获取文件预览URL请求, id={}", id);
-        String url = filesService.generatePreviewUrl(id);
-        return Result.success(url);
+        try {
+            log.info("收到获取文件预览URL请求, id={}", id);
+            String url = filesService.generatePreviewUrl(id);
+            return Result.success(url);
+        } catch (Exception e) {
+            log.error("获取文件预览URL异常, id={}", id, e);
+            return Result.fail("获取文件预览URL失败: " + e.getMessage());
+        }
     }
 
     /**
@@ -74,6 +91,11 @@ public class FileController {
     public Result<List<FileVO>> listByBiz(@RequestParam String bizType,
                                           @RequestParam String bizId,
                                           @RequestParam(required = false) String fileType) {
-        return Result.success(filesService.listByBiz(bizType, bizId, fileType));
+        try {
+            return Result.success(filesService.listByBiz(bizType, bizId, fileType));
+        } catch (Exception e) {
+            log.error("按业务查询文件异常, bizType={}, bizId={}, fileType={}", bizType, bizId, fileType, e);
+            return Result.fail("查询文件失败: " + e.getMessage());
+        }
     }
 }

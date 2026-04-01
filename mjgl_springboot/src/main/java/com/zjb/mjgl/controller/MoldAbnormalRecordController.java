@@ -9,6 +9,7 @@ import com.zjb.mjgl.pojo.vo.MoldAbnormalRecordVO;
 import com.zjb.mjgl.service.MoldAbnormalRecordService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -25,6 +26,7 @@ import java.util.Optional;
 @RestController
 @RequestMapping("/api/mold-abnormal")
 @RequiredArgsConstructor
+@PreAuthorize("hasAnyRole('ADMIN','INSPECTOR')")
 public class MoldAbnormalRecordController {
 
     private final MoldAbnormalRecordService moldAbnormalRecordService;

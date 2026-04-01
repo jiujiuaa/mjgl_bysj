@@ -9,6 +9,7 @@ import com.zjb.mjgl.pojo.vo.RepairRecordVO;
 import com.zjb.mjgl.service.RepairService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -17,6 +18,7 @@ import java.util.Optional;
 @Slf4j
 @RestController
 @RequestMapping("/api/repair")
+@PreAuthorize("isAuthenticated()")
 public class RepairController {
 
     @Autowired
@@ -89,6 +91,7 @@ public class RepairController {
 
     /** 维修记录合理性审批（仅 ADMIN） */
     @PostMapping("/record/{id}/approval")
+    @PreAuthorize("hasRole('ADMIN')")
     public Result<?> approval(@PathVariable String id, @RequestBody java.util.Map<String, Object> body) {
         Integer status = null;
         if (body != null && body.get("status") instanceof Number) {

@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
+import { canAccessPathByRole } from '@/constants/permissions'
 import { 
   login as loginApi, 
   register as registerApi, 
@@ -23,6 +24,7 @@ export const useAuthStore = defineStore('auth', () => {
   // 计算属性
   const isAuthenticated = computed(() => !!token.value)
   const isAdmin = computed(() => role.value === 'ADMIN')
+  const canAccessPath = (path) => isAuthenticated.value && canAccessPathByRole(path, role.value)
 
   // 登录方法
   // 对应后端：POST /api/auth/login
@@ -177,6 +179,7 @@ export const useAuthStore = defineStore('auth', () => {
     users,
     isAuthenticated,
     isAdmin,
+    canAccessPath,
     login,
     logout,
     addUser,

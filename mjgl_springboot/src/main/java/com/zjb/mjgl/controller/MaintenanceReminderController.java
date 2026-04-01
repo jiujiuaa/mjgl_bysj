@@ -7,6 +7,7 @@ import com.zjb.mjgl.pojo.entity.MaintenanceReminder;
 import com.zjb.mjgl.pojo.vo.MaintenanceReminderVO;
 import com.zjb.mjgl.service.MaintenanceReminderService;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
@@ -18,6 +19,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/maintenance-reminder")
 @Slf4j
+@PreAuthorize("isAuthenticated()")
 public class MaintenanceReminderController {
 
     @Resource
@@ -31,9 +33,14 @@ public class MaintenanceReminderController {
             @RequestBody(required = false) MaintenanceReminderQueryParam param,
             @RequestParam(defaultValue = "1") int pageNum,
             @RequestParam(defaultValue = "10") int pageSize) {
-        MaintenanceReminderQueryParam effective = param != null ? param : new MaintenanceReminderQueryParam();
-        log.info("收到保养提醒分页查询请求, pageNum={}, pageSize={}, 条件={}", pageNum, pageSize, effective);
-        return Result.success(maintenanceReminderService.queryByCondition(effective, pageNum, pageSize));
+        try {
+            MaintenanceReminderQueryParam effective = param != null ? param : new MaintenanceReminderQueryParam();
+            log.info("收到保养提醒分页查询请求, pageNum={}, pageSize={}, 条件={}", pageNum, pageSize, effective);
+            return Result.success(maintenanceReminderService.queryByCondition(effective, pageNum, pageSize));
+        } catch (Exception e) {
+            log.error("分页查询保养提醒异常, pageNum={}, pageSize={}", pageNum, pageSize, e);
+            return Result.fail("查询保养提醒失败: " + e.getMessage());
+        }
     }
 
     /**
@@ -41,8 +48,13 @@ public class MaintenanceReminderController {
      */
     @GetMapping("/list/mold/{moldId}")
     public Result<List<MaintenanceReminderVO>> listByMoldId(@PathVariable String moldId) {
-        log.info("收到按模具ID查询保养提醒请求, moldId={}", moldId);
-        return maintenanceReminderService.listByMoldId(moldId);
+        try {
+            log.info("收到按模具ID查询保养提醒请求, moldId={}", moldId);
+            return maintenanceReminderService.listByMoldId(moldId);
+        } catch (Exception e) {
+            log.error("按模具查询保养提醒异常, moldId={}", moldId, e);
+            return Result.fail("查询保养提醒失败: " + e.getMessage());
+        }
     }
 
     /**
@@ -50,8 +62,13 @@ public class MaintenanceReminderController {
      */
     @GetMapping("/{id}")
     public Result<MaintenanceReminder> getById(@PathVariable String id) {
-        log.info("收到根据ID查询保养提醒请求, id={}", id);
-        return maintenanceReminderService.getById(id);
+        try {
+            log.info("收到根据ID查询保养提醒请求, id={}", id);
+            return maintenanceReminderService.getById(id);
+        } catch (Exception e) {
+            log.error("查询保养提醒详情异常, id={}", id, e);
+            return Result.fail("查询保养提醒详情失败: " + e.getMessage());
+        }
     }
 
     /**
@@ -59,8 +76,13 @@ public class MaintenanceReminderController {
      */
     @PostMapping("/{id}/send")
     public Result<?> sendNow(@PathVariable String id) {
-        log.info("收到手动发送保养提醒请求, id={}", id);
-        return maintenanceReminderService.sendReminderNow(id);
+        try {
+            log.info("收到手动发送保养提醒请求, id={}", id);
+            return maintenanceReminderService.sendReminderNow(id);
+        } catch (Exception e) {
+            log.error("手动发送保养提醒异常, id={}", id, e);
+            return Result.fail("发送保养提醒失败: " + e.getMessage());
+        }
     }
 
     /**
@@ -68,7 +90,12 @@ public class MaintenanceReminderController {
      */
     @PostMapping("/{id}/ignore")
     public Result<?> ignore(@PathVariable String id) {
-        log.info("收到忽略保养提醒请求, id={}", id);
-        return maintenanceReminderService.ignoreReminder(id);
+        try {
+            log.info("收到忽略保养提醒请求, id={}", id);
+            return maintenanceReminderService.ignoreReminder(id);
+        } catch (Exception e) {
+            log.error("忽略保养提醒异常, id={}", id, e);
+            return Result.fail("忽略保养提醒失败: " + e.getMessage());
+        }
     }
 }

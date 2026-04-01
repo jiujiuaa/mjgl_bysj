@@ -93,5 +93,13 @@
         WHERE id = #{id}
     </update>
 
+    <update id="markAllReadByUserId">
+        UPDATE user_notifications
+        SET read_flag = 1,
+            read_at   = NOW()
+        WHERE user_id = #{userId}
+          AND read_flag = 0
+    </update>
+
 </mapper>
 

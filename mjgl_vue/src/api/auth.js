@@ -19,6 +19,15 @@ export const register = (data) => {
 }
 
 /**
+ * 公开注册（默认普通用户）
+ * @param {Object} data - 用户数据 {username, password, realName, phone, email}
+ * @returns {Promise}
+ */
+export const signup = (data) => {
+  return request.post('/api/auth/signup', data)
+}
+
+/**
  * 查询所有用户（需要管理员权限）
  * @returns {Promise}
  */
@@ -74,4 +83,21 @@ export const updateUserStatus = (id, status) => {
  */
 export const queryUsers = (params) => {
   return request.get('/api/auth/users/query', { params })
+}
+
+/**
+ * 获取当前登录用户个人资料
+ * @returns {Promise}
+ */
+export const fetchCurrentUserProfile = () => {
+  return request.get('/api/auth/profile')
+}
+
+/**
+ * 更新当前登录用户个人资料
+ * @param {Object} data - 资料数据 {realName, age, phone, email, newPassword}
+ * @returns {Promise}
+ */
+export const updateCurrentUserProfile = (data) => {
+  return request.put('/api/auth/profile', data)
 }

@@ -16,6 +16,8 @@ public interface MaintenanceLogMapper {
 
     List<MaintenanceLogs> getByPlanId(String id);
 
+    MaintenanceLogs getById(@Param("id") String id);
+
     void deleteById(String id);
 
     int update(MaintenanceLogs maintenanceLogs);

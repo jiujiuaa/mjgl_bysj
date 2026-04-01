@@ -5,6 +5,7 @@ import com.zjb.mjgl.common.UserDetailsImpl;
 import com.zjb.mjgl.pojo.dto.BatchIdsDTO;
 import com.zjb.mjgl.pojo.dto.LoginDTO;
 import com.zjb.mjgl.pojo.dto.RegisterDTO;
+import com.zjb.mjgl.pojo.dto.UserProfileUpdateDTO;
 import com.zjb.mjgl.pojo.dto.UserQueryDTO;
 import com.zjb.mjgl.pojo.vo.LoginVO;
 import com.zjb.mjgl.pojo.vo.UserVO;
@@ -111,6 +112,34 @@ public class AuthController {
         }
     }
 
+    /**
+     * 公开注册（默认普通用户 USER）
+     */
+    @PostMapping("/signup")
+    public Result<String> signup(@RequestBody RegisterDTO registerDTO) {
+        try {
+            if (registerDTO.getUsername() == null || registerDTO.getUsername().trim().isEmpty()) {
+                return Result.fail("用户名不能为空");
+            }
+            if (registerDTO.getPassword() == null || registerDTO.getPassword().trim().isEmpty()) {
+                return Result.fail("密码不能为空");
+            }
+            if (registerDTO.getRealName() == null || registerDTO.getRealName().trim().isEmpty()) {
+                return Result.fail("真实姓名不能为空");
+            }
+
+            // 公开注册强制为普通用户，避免越权注册其他角色
+            registerDTO.setRole("USER");
+            userService.registerUser(registerDTO);
+            return Result.success("注册成功");
+        } catch (RuntimeException e) {
+            return Result.fail(e.getMessage());
+        } catch (Exception e) {
+            log.error("公开注册失败", e);
+            return Result.fail("注册失败: " + e.getMessage());
+        }
+    }
+
     @GetMapping("/alluser")
     @PreAuthorize("hasRole('ADMIN')")
     public Result<List<UserVO>> getAllUsers() {
@@ -195,6 +224,27 @@ public class AuthController {
         } catch (Exception e) {
             log.error("查询用户失败", e);
             return Result.fail("查询用户失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 获取当前登录用户的个人资料
+     */
+    @GetMapping("/profile")
+    public Result<UserVO> getCurrentUserProfile() {
+        return userService.getCurrentUserProfile();
+    }
+
+    /**
+     * 更新当前登录用户的个人资料
+     */
+    @PutMapping("/profile")
+    public Result<String> updateCurrentUserProfile(@RequestBody UserProfileUpdateDTO profileUpdateDTO) {
+        try {
+            return userService.updateCurrentUserProfile(profileUpdateDTO);
+        } catch (Exception e) {
+            log.error("更新个人资料失败", e);
+            return Result.fail("更新个人资料失败: " + e.getMessage());
         }
     }
 

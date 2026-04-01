@@ -1,16 +1,33 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
+import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { sendAlertApi, sendAlertToUserApi } from '@/api/ws'
 import { fetchMolds } from '@/api/molds'
 import { fetchAllNotifications } from '@/api/notifications'
 
 const authStore = useAuthStore()
+const router = useRouter()
 
 const usersLoading = ref(false)
 const moldsLoading = ref(false)
 const historyList = ref([])
 const historyLoading = ref(false)
+const pageSize = ref(5)
+const currentPage = ref(1)
+
+const totalPages = computed(() => {
+  if (!historyList.value.length || !pageSize.value) return 1
+  return Math.max(1, Math.ceil(historyList.value.length / pageSize.value))
+})
+
+const pagedHistoryList = computed(() => {
+  if (!historyList.value.length) return []
+  const size = pageSize.value || 10
+  const page = Math.min(Math.max(currentPage.value, 1), totalPages.value)
+  const start = (page - 1) * size
+  return historyList.value.slice(start, start + size)
+})
 
 // ALL | SINGLE | MULTI
 const targetMode = ref('ALL')
@@ -49,6 +66,37 @@ const moldIdNameMap = computed(() =>
 const getMoldName = (id) => {
   if (id == null || id === '') return '无'
   return moldIdNameMap.value[id] || `模具 ${id}`
+}
+
+const resolveMoldNameFromNotification = (n) => {
+  // 首选：直接使用通知里带的 moldId（适用于使用记录/维修等场景）
+  if (n?.moldId != null && n.moldId !== '') {
+    return getMoldName(n.moldId)
+  }
+  // 保养提醒场景：从文案里解析 "模具ID xxx" 作为兜底
+  const biz = n?.bizType || n?.biz_type
+  if (biz === 'MAINTENANCE_REMINDER' && typeof n?.content === 'string') {
+    const match = n.content.match(/模具ID\s+([^\s]+)\s/)
+    const rawId = match?.[1]
+    if (rawId) {
+      const mold =
+        molds.value.find((m) => m.id === rawId) ||
+        molds.value.find((m) => m.moldCode === rawId)
+      if (mold) {
+        return mold.moldName || mold.name || mold.moldCode || `模具 ${rawId}`
+      }
+      return `模具 ${rawId}`
+    }
+  }
+  return '无'
+}
+
+const goBack = () => {
+  if (window.history.length > 1) {
+    router.back()
+    return
+  }
+  router.push('/home')
 }
 
 const sendAlert = async () => {
@@ -132,6 +180,16 @@ const loadMoldsForSelect = async () => {
   }
 }
 
+const formatDateTime = (val) => {
+  if (!val) return '-'
+  const date = new Date(typeof val === 'string' ? val.replace(' ', 'T') : val)
+  if (Number.isNaN(date.getTime())) return String(val)
+  const pad = (n) => String(n).padStart(2, '0')
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(
+    date.getMinutes(),
+  )}`
+}
+
 const loadHistory = async () => {
   if (!authStore.isAuthenticated) {
     historyList.value = []
@@ -141,6 +199,7 @@ const loadHistory = async () => {
   try {
     const res = await fetchAllNotifications()
     historyList.value = res.data || []
+    currentPage.value = 1
   } catch (e) {
     historyList.value = []
   } finally {
@@ -163,6 +222,7 @@ onMounted(() => {
           <h2 class="alert-title">发送告警 / 通知消息</h2>
           <p class="alert-subtitle">支持发送给全部用户、单个用户或多个指定用户</p>
         </div>
+        <button type="button" class="back-btn" @click="goBack">返回</button>
       </div>
 
       <div class="alert-form">
@@ -296,31 +356,82 @@ onMounted(() => {
         <div v-else-if="historyList.length === 0" class="history-empty">
           暂无历史消息
         </div>
-        <ul v-else class="history-list">
-          <li v-for="n in historyList" :key="n.id" class="history-item">
-            <div class="history-item-header">
-              <span class="history-item-type">{{ n.type }}</span>
-              <span class="history-item-time">{{ n.createdAt }}</span>
-            </div>
-            <div class="history-item-title">
-              {{ n.title }}
-              <span
-                class="history-badge"
-                :class="n.readFlag === 0 ? 'history-badge-unread' : 'history-badge-read'"
+        <div v-else class="history-table-wrapper">
+          <table class="history-table">
+            <thead>
+              <tr>
+                <th style="width: 80px">类型</th>
+                <th style="width: 80px">状态</th>
+                <th>标题 / 内容</th>
+                <th style="width: 200px">业务 / 模具</th>
+                <th style="width: 150px">推送人</th>
+                <th style="width: 150px">时间</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr
+                v-for="n in pagedHistoryList"
+                :key="n.id"
+                class="history-row"
+                :class="n.readFlag === 0 ? 'history-item-unread' : 'history-item-read'"
               >
-                {{ n.readFlag === 0 ? '未读' : '已读' }}
-              </span>
-            </div>
-            <div class="history-item-content">{{ n.content }}</div>
-            <div class="history-item-meta">
-              推送人: {{ n.senderName || n.senderId || '系统' }}
-              <span class="history-divider">|</span>
-              业务: {{ n.bizType || n.biz_type || '-' }}
-              <span class="history-divider">|</span>
-              模具: {{ getMoldName(n.moldId) }}
-            </div>
-          </li>
-        </ul>
+                <td>
+                  <span
+                    class="history-item-type"
+                    :class="`history-type-${(n.type || 'INFO').toLowerCase()}`"
+                  >
+                    {{ n.type || 'INFO' }}
+                  </span>
+                </td>
+                <td>
+                  <span
+                    class="history-badge"
+                    :class="n.readFlag === 0 ? 'history-badge-unread' : 'history-badge-read'"
+                  >
+                    {{ n.readFlag === 0 ? '未读' : '已读' }}
+                  </span>
+                </td>
+                <td class="history-cell-main">
+                  <div class="history-item-title">{{ n.title }}</div>
+                  <div class="history-item-content">{{ n.content }}</div>
+                </td>
+                <td>
+                  <div class="history-item-meta">
+                    <div>业务: {{ n.bizType || n.biz_type || '-' }}</div>
+                    <div>模具: {{ resolveMoldNameFromNotification(n) }}</div>
+                  </div>
+                </td>
+                <td>
+                  <span>{{ n.senderName || n.senderId || '系统' }}</span>
+                </td>
+                <td>
+                  <span class="history-item-time">{{ formatDateTime(n.createdAt) }}</span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div v-if="historyList.length > 0" class="history-pagination">
+          <button
+            type="button"
+            class="pager-btn"
+            :disabled="currentPage <= 1"
+            @click="currentPage = Math.max(1, currentPage - 1)"
+          >
+            上一页
+          </button>
+          <span class="pager-info">
+            第 {{ currentPage }} / {{ totalPages }} 页
+          </span>
+          <button
+            type="button"
+            class="pager-btn"
+            :disabled="currentPage >= totalPages"
+            @click="currentPage = Math.min(totalPages, currentPage + 1)"
+          >
+            下一页
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -349,6 +460,10 @@ onMounted(() => {
   border-bottom: 1px solid #e5e7eb;
   background: linear-gradient(135deg, #1e3a8a 0%, #1d4ed8 100%);
   color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
 }
 
 .alert-title {
@@ -360,6 +475,22 @@ onMounted(() => {
 .alert-subtitle {
   font-size: 13px;
   opacity: 0.9;
+}
+
+.back-btn {
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  background: rgba(255, 255, 255, 0.18);
+  color: #ffffff;
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.back-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: translateY(-1px);
 }
 
 .alert-form {
@@ -563,43 +694,81 @@ onMounted(() => {
   color: #6b7280;
 }
 
-.history-list {
-  list-style: none;
-  margin: 6px 0 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  max-height: 320px;
-  overflow-y: auto;
-}
-
-.history-item {
-  padding: 8px 10px;
-  border-radius: 8px;
+.history-table-wrapper {
+  margin-top: 6px;
+  border-radius: 10px;
   border: 1px solid #e5e7eb;
+  overflow: hidden;
   background: #ffffff;
 }
 
-.history-item-header {
-  display: flex;
-  justify-content: space-between;
-  font-size: 12px;
-  color: #6b7280;
-  margin-bottom: 2px;
+.history-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.history-table thead {
+  background: #f3f4f6;
+}
+
+.history-table th,
+.history-table td {
+  padding: 8px 10px;
+  border-bottom: 1px solid #e5e7eb;
+  text-align: left;
+  vertical-align: top;
+}
+
+.history-table th {
+  font-weight: 600;
+  color: #374151;
+}
+
+.history-row.history-item-unread {
+  background: #fef2f2;
+}
+
+.history-row.history-item-read {
+  background: #ffffff;
+}
+
+.history-row:hover {
+  background: #eff6ff;
 }
 
 .history-item-type {
   font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  display: inline-block;
+}
+
+.history-type-error {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.history-type-warning {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.history-type-info {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.history-type-default {
+  background: #e5e7eb;
+  color: #374151;
 }
 
 .history-item-title {
   font-size: 14px;
   font-weight: 600;
   color: #111827;
-  display: flex;
-  align-items: center;
-  gap: 6px;
   margin-bottom: 2px;
 }
 
@@ -634,6 +803,42 @@ onMounted(() => {
 .history-divider {
   margin: 0 4px;
   color: #d1d5db;
+}
+
+.history-pagination {
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  font-size: 12px;
+  color: #4b5563;
+}
+
+.pager-btn {
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid #d1d5db;
+  background: #ffffff;
+  cursor: pointer;
+  font-size: 12px;
+  transition: background 0.2s, border-color 0.2s, color 0.2s, transform 0.1s;
+}
+
+.pager-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.pager-btn:not(:disabled):hover {
+  background: #eff6ff;
+  border-color: #93c5fd;
+  color: #1d4ed8;
+}
+
+.pager-info {
+  min-width: 100px;
+  text-align: center;
 }
 
 @media (max-width: 640px) {

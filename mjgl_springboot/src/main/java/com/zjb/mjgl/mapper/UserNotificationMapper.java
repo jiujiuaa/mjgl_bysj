@@ -16,5 +16,7 @@ public interface UserNotificationMapper {
     List<UserNotification> selectAllByUserId(@Param("userId") String userId);
 
     int markRead(@Param("id") String id);
+
+    int markAllReadByUserId(@Param("userId") String userId);
 }
 

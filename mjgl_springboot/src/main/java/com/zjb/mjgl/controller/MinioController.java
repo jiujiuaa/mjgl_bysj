@@ -3,9 +3,11 @@ package com.zjb.mjgl.controller;
 import com.zjb.mjgl.common.Result;
 import com.zjb.mjgl.utils.MinioUtil;
 import io.minio.messages.Item;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -21,6 +23,8 @@ import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/minio")
+@PreAuthorize("isAuthenticated()")
+@Slf4j
 public class MinioController {
     @Autowired
     private MinioUtil minioUtil;
@@ -33,14 +37,19 @@ public class MinioController {
      */
     @PostMapping("/upload")
     public Result<Map<String, String>> upload(@RequestParam("file") MultipartFile file) {
-        if (file == null || file.isEmpty()) {
-            return Result.fail("请选择要上传的文件");
+        try {
+            if (file == null || file.isEmpty()) {
+                return Result.fail("请选择要上传的文件");
+            }
+            Map<String, String> result = minioUtil.uploadFile(file);
+            if (result == null) {
+                return Result.fail("文件上传失败");
+            }
+            return Result.success(result);
+        } catch (Exception e) {
+            log.error("MinIO单文件上传异常, originalFilename={}", file == null ? null : file.getOriginalFilename(), e);
+            return Result.fail("文件上传失败: " + e.getMessage());
         }
-        Map<String, String> result = minioUtil.uploadFile(file);
-        if (result == null) {
-            return Result.fail("文件上传失败");
-        }
-        return Result.success(result);
     }
 
     /**
@@ -51,11 +60,16 @@ public class MinioController {
      */
     @PostMapping("/upload/batch")
     public Result<List<Map<String, String>>> uploadBatch(@RequestParam("files") MultipartFile[] files) {
-        if (files == null || files.length == 0) {
-            return Result.fail("请选择要上传的文件");
+        try {
+            if (files == null || files.length == 0) {
+                return Result.fail("请选择要上传的文件");
+            }
+            List<Map<String, String>> result = minioUtil.uploadFiles(java.util.Arrays.asList(files));
+            return Result.success(result);
+        } catch (Exception e) {
+            log.error("MinIO批量上传异常, count={}", files == null ? 0 : files.length, e);
+            return Result.fail("批量上传失败: " + e.getMessage());
         }
-        List<Map<String, String>> result = minioUtil.uploadFiles(java.util.Arrays.asList(files));
-        return Result.success(result);
     }
 
     /**
@@ -65,20 +79,23 @@ public class MinioController {
      */
     @GetMapping("/download")
     public void download(@RequestParam("fileName") String fileName, HttpServletResponse response) {
-        if (!minioUtil.objectExists(fileName)) {
-            response.setStatus(HttpServletResponse.SC_NOT_FOUND);
-            return;
-        }
-        try (InputStream is = minioUtil.downloadfile(fileName)) {
-            StatObjectResponse stat = minioUtil.getObjectStat(fileName);
-            String contentType = stat.contentType() != null ? stat.contentType() : MediaType.APPLICATION_OCTET_STREAM_VALUE;
-            String encodedName = URLEncoder.encode(fileName, "UTF-8").replace("+", "%20");
-            response.setContentType(contentType);
-            response.setHeader(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + encodedName + "\"; filename*=UTF-8''" + encodedName);
-            response.setContentLengthLong(stat.size());
-            copyStream(is, response.getOutputStream());
-            response.flushBuffer();
+        try {
+            if (!minioUtil.objectExists(fileName)) {
+                response.setStatus(HttpServletResponse.SC_NOT_FOUND);
+                return;
+            }
+            try (InputStream is = minioUtil.downloadfile(fileName)) {
+                StatObjectResponse stat = minioUtil.getObjectStat(fileName);
+                String contentType = stat.contentType() != null ? stat.contentType() : MediaType.APPLICATION_OCTET_STREAM_VALUE;
+                String encodedName = URLEncoder.encode(fileName, "UTF-8").replace("+", "%20");
+                response.setContentType(contentType);
+                response.setHeader(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + encodedName + "\"; filename*=UTF-8''" + encodedName);
+                response.setContentLengthLong(stat.size());
+                copyStream(is, response.getOutputStream());
+                response.flushBuffer();
+            }
         } catch (Exception e) {
+            log.error("MinIO下载异常, fileName={}", fileName, e);
             response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
         }
     }
@@ -90,19 +107,22 @@ public class MinioController {
      */
     @GetMapping("/preview")
     public void preview(@RequestParam("fileName") String fileName, HttpServletResponse response) {
-        if (!minioUtil.objectExists(fileName)) {
-            response.setStatus(HttpServletResponse.SC_NOT_FOUND);
-            return;
-        }
-        try (InputStream is = minioUtil.downloadfile(fileName)) {
-            StatObjectResponse stat = minioUtil.getObjectStat(fileName);
-            String contentType = stat.contentType() != null ? stat.contentType() : MediaType.APPLICATION_OCTET_STREAM_VALUE;
-            response.setContentType(contentType);
-            response.setHeader(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + fileName + "\"");
-            response.setContentLengthLong(stat.size());
-            copyStream(is, response.getOutputStream());
-            response.flushBuffer();
+        try {
+            if (!minioUtil.objectExists(fileName)) {
+                response.setStatus(HttpServletResponse.SC_NOT_FOUND);
+                return;
+            }
+            try (InputStream is = minioUtil.downloadfile(fileName)) {
+                StatObjectResponse stat = minioUtil.getObjectStat(fileName);
+                String contentType = stat.contentType() != null ? stat.contentType() : MediaType.APPLICATION_OCTET_STREAM_VALUE;
+                response.setContentType(contentType);
+                response.setHeader(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + fileName + "\"");
+                response.setContentLengthLong(stat.size());
+                copyStream(is, response.getOutputStream());
+                response.flushBuffer();
+            }
         } catch (Exception e) {
+            log.error("MinIO预览异常, fileName={}", fileName, e);
             response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
         }
     }
@@ -122,11 +142,16 @@ public class MinioController {
      */
     @DeleteMapping("/delete")
     public Result<Void> delete(@RequestParam("fileName") String fileName) {
-        if (!minioUtil.objectExists(fileName)) {
-            return Result.fail("文件不存在");
+        try {
+            if (!minioUtil.objectExists(fileName)) {
+                return Result.fail("文件不存在");
+            }
+            minioUtil.deleteFile(fileName);
+            return Result.success();
+        } catch (Exception e) {
+            log.error("MinIO删除文件异常, fileName={}", fileName, e);
+            return Result.fail("删除文件失败: " + e.getMessage());
         }
-        minioUtil.deleteFile(fileName);
-        return Result.success();
     }
 
     /**
@@ -136,18 +161,23 @@ public class MinioController {
      */
     @GetMapping("/list")
     public Result<List<Map<String, Object>>> list() {
-        List<Item> items = minioUtil.listObjects();
-        List<Map<String, Object>> list = items.stream()
-                .filter(item -> !item.isDir())
-                .map(item -> {
-                    Map<String, Object> map = new java.util.HashMap<>();
-                    map.put("objectName", item.objectName());
-                    map.put("size", item.size());
-                    map.put("lastModified", item.lastModified() != null ? item.lastModified().toString() : null);
-                    map.put("url", minioUtil.getObjectUrl(item.objectName(), 7));
-                    return map;
-                })
-                .collect(Collectors.toList());
-        return Result.success(list);
+        try {
+            List<Item> items = minioUtil.listObjects();
+            List<Map<String, Object>> list = items.stream()
+                    .filter(item -> !item.isDir())
+                    .map(item -> {
+                        Map<String, Object> map = new java.util.HashMap<>();
+                        map.put("objectName", item.objectName());
+                        map.put("size", item.size());
+                        map.put("lastModified", item.lastModified() != null ? item.lastModified().toString() : null);
+                        map.put("url", minioUtil.getObjectUrl(item.objectName(), 7));
+                        return map;
+                    })
+                    .collect(Collectors.toList());
+            return Result.success(list);
+        } catch (Exception e) {
+            log.error("MinIO文件列表查询异常", e);
+            return Result.fail("查询文件列表失败: " + e.getMessage());
+        }
     }
 }

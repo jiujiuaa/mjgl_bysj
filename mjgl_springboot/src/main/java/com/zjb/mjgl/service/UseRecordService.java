@@ -12,7 +12,7 @@ public interface UseRecordService {
     /**
      * 创建一条模具使用/借出记录
      */
-    boolean createRecord(MoldUsageRecordDTO moldUsageRecordDTO);
+    Result<Void> createRecord(MoldUsageRecordDTO moldUsageRecordDTO);
 
 
     Result<String> updateStatus(String id, Integer status);

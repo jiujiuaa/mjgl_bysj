@@ -26,5 +26,10 @@ public interface NotificationService {
      * 将通知标记为已读
      */
     void markRead(String id);
+
+    /**
+     * 将某用户全部未读通知标记为已读
+     */
+    void markAllRead(String userId);
 }
 

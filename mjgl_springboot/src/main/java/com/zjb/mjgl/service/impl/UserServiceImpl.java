@@ -6,11 +6,13 @@ import com.zjb.mjgl.common.enums.UserStatusEnum;
 import com.zjb.mjgl.mapper.UserMapper;
 import com.zjb.mjgl.pojo.dto.BatchIdsDTO;
 import com.zjb.mjgl.pojo.dto.RegisterDTO;
+import com.zjb.mjgl.pojo.dto.UserProfileUpdateDTO;
 import com.zjb.mjgl.pojo.dto.UserQueryDTO;
 import com.zjb.mjgl.pojo.entity.User;
 import com.zjb.mjgl.pojo.vo.UserVO;
 import com.zjb.mjgl.service.UserService;
 import com.zjb.mjgl.utils.IdUtil;
+import com.zjb.mjgl.utils.UserUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -190,6 +192,54 @@ public class UserServiceImpl implements UserService {
             .collect(Collectors.toList());
 
         return Result.success(userVOList);
+    }
+
+    @Override
+    public Result<UserVO> getCurrentUserProfile() {
+        User currentUser = UserUtils.getCurrentUserDetails();
+        if (currentUser == null) {
+            return Result.fail("未登录或登录已失效");
+        }
+        User freshUser = userMapper.selectOneById(currentUser.getId());
+        if (freshUser == null) {
+            return Result.fail("用户不存在");
+        }
+        return Result.success(convertToVO(freshUser));
+    }
+
+    @Override
+    public Result<String> updateCurrentUserProfile(UserProfileUpdateDTO profileUpdateDTO) {
+        User currentUser = UserUtils.getCurrentUserDetails();
+        if (currentUser == null) {
+            return Result.fail("未登录或登录已失效");
+        }
+        User existingUser = userMapper.selectOneById(currentUser.getId());
+        if (existingUser == null) {
+            return Result.fail("用户不存在");
+        }
+
+        if (profileUpdateDTO.getRealName() != null && !profileUpdateDTO.getRealName().trim().isEmpty()) {
+            existingUser.setRealName(profileUpdateDTO.getRealName());
+        }
+        if (profileUpdateDTO.getAge() != null) {
+            existingUser.setAge(profileUpdateDTO.getAge());
+        }
+        if (profileUpdateDTO.getPhone() != null) {
+            existingUser.setPhone(profileUpdateDTO.getPhone());
+        }
+        if (profileUpdateDTO.getEmail() != null) {
+            existingUser.setEmail(profileUpdateDTO.getEmail());
+        }
+        if (profileUpdateDTO.getNewPassword() != null && !profileUpdateDTO.getNewPassword().trim().isEmpty()) {
+            existingUser.setPassword(passwordEncoder.encode(profileUpdateDTO.getNewPassword()));
+        }
+
+        int rows = userMapper.updateUser(existingUser);
+        if (rows > 0) {
+            log.info("更新个人资料成功，用户id为 {}", existingUser.getId());
+            return Result.success("更新个人资料成功");
+        }
+        return Result.fail("更新个人资料失败");
     }
 }
 

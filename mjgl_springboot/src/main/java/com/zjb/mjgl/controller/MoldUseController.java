@@ -6,6 +6,7 @@ import com.zjb.mjgl.pojo.dto.MoldUsageRecordDTO;
 import com.zjb.mjgl.service.UseRecordService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
@@ -13,6 +14,7 @@ import java.util.Map;
 @Slf4j
 @RestController
 @RequestMapping("/api/molduse")
+@PreAuthorize("isAuthenticated()")
 public class MoldUseController {
 
     @Autowired
@@ -26,11 +28,7 @@ public class MoldUseController {
         if (moldUsageRecordDTO == null || moldUsageRecordDTO.getMoldId() == null) {
             return Result.fail("模具ID不能为空");
         }
-        boolean success = useRecordService.createRecord(moldUsageRecordDTO);
-        if (success) {
-            return Result.success();
-        }
-        return Result.fail("创建失败,请检查模具状态");
+        return useRecordService.createRecord(moldUsageRecordDTO);
     }
     @PutMapping("/record/{id}/status")
     public Result<String> updateUserStatus(@PathVariable String id, @RequestBody Map<String, Integer> requestBody) {
@@ -102,6 +100,7 @@ public class MoldUseController {
      * 使用记录合理性审批：1=合理,2=存在问题
      */
     @PostMapping("/record/{id}/approval")
+    @PreAuthorize("hasRole('ADMIN')")
     public Result<?> approveUsage(@PathVariable String id, @RequestBody Map<String, Object> body) {
         Object statusObj = body.get("status");
         Integer status = null;

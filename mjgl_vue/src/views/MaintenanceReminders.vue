@@ -166,6 +166,17 @@
                     <span class="page-info">
                       第 {{ pageNum }} / {{ page.pages }} 页，共 {{ page.total || 0 }} 条
                     </span>
+                    <input
+                      v-model.number="pageInput"
+                      type="number"
+                      class="page-input"
+                      min="1"
+                      :max="page.pages"
+                      @keyup.enter="handlePageJump"
+                    />
+                    <button type="button" class="page-btn small" @click="handlePageJump">
+                      跳转
+                    </button>
                     <button
                       class="page-btn"
                       :disabled="pageNum === page.pages"
@@ -204,6 +215,7 @@ const successMessage = ref('')
 const errorMessage = ref('')
 
 const pageNum = ref(1)
+const pageInput = ref(1)
 const pageSize = ref(10)
 const page = reactive({
   list: [],
@@ -257,6 +269,7 @@ const loadReminders = async () => {
 
 const handleQuery = () => {
   pageNum.value = 1
+  pageInput.value = 1
   loadReminders()
 }
 
@@ -266,13 +279,25 @@ const handleReset = () => {
   query.reminderType = null
   query.status = null
   pageNum.value = 1
+  pageInput.value = 1
   loadReminders()
 }
 
 const changePage = (newPage) => {
   if (newPage < 1 || (page.pages && newPage > page.pages)) return
   pageNum.value = newPage
+  pageInput.value = newPage
   loadReminders()
+}
+
+const handlePageJump = () => {
+  const target = Number(pageInput.value) || 0
+  if (!page.pages || target < 1 || target > page.pages) {
+    pageInput.value = pageNum.value
+    return
+  }
+  if (target === pageNum.value) return
+  changePage(target)
 }
 
 const handleSendReminder = async (item) => {
@@ -706,6 +731,35 @@ onMounted(() => {
 .empty-cell {
   text-align: center;
   color: #9ca3af;
+}
+
+.pagination {
+  margin-top: 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.page-btn {
+  padding: 6px 12px;
+  border-radius: 4px;
+  border: 1px solid #d1d5db;
+  background: #fff;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.page-btn.small {
+  padding: 4px 10px;
+  font-size: 12px;
+}
+
+.page-input {
+  width: 60px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  border: 1px solid #d1d5db;
+  font-size: 13px;
 }
 
 .col-actions {

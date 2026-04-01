@@ -1,0 +1,141 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.zjb.mjgl.mapper.MoldScrapApplicationsMapper">
+
+    <resultMap id="scrapApplicationVoMap" type="com.zjb.mjgl.pojo.vo.MoldScrapApplicationVO">
+        <id column="id" property="id"/>
+        <result column="mold_id" property="moldId"/>
+        <result column="mold_code" property="moldCode"/>
+        <result column="mold_name" property="moldName"/>
+        <result column="reason" property="reason"/>
+        <result column="status" property="status"/>
+
+        <result column="applicant_name" property="applicantName"/>
+        <result column="approver_name" property="approverName"/>
+        <result column="handler_name" property="handlerName"/>
+
+        <result column="approval_comment" property="approvalComment"/>
+        <result column="handler_comment" property="handlerComment"/>
+
+        <result column="created_at" property="createdAt"
+                typeHandler="com.zjb.mjgl.typehandler.LocalDateTimeTypeHandler"/>
+        <result column="approved_at" property="approvedAt"
+                typeHandler="com.zjb.mjgl.typehandler.LocalDateTimeTypeHandler"/>
+        <result column="handled_at" property="handledAt"
+                typeHandler="com.zjb.mjgl.typehandler.LocalDateTimeTypeHandler"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="com.zjb.mjgl.pojo.entity.MoldScrapApplications">
+        INSERT INTO mold_scrap_applications (
+            id,
+            mold_id,
+            applicant_id,
+            applicant_name,
+            reason,
+            status,
+            approver_id,
+            approver_name,
+            approval_comment,
+            approved_at,
+            handler_id,
+            handler_name,
+            handler_comment,
+            handled_at,
+            created_at,
+            updated_at
+        )
+        VALUES (
+            #{id},
+            #{moldId},
+            #{applicantId},
+            #{applicantName},
+            #{reason},
+            #{status},
+            #{approverId},
+            #{approverName},
+            #{approvalComment},
+            #{approvedAt, typeHandler=com.zjb.mjgl.typehandler.LocalDateTimeTypeHandler},
+            #{handlerId},
+            #{handlerName},
+            #{handlerComment},
+            #{handledAt, typeHandler=com.zjb.mjgl.typehandler.LocalDateTimeTypeHandler},
+            #{createdAt, typeHandler=com.zjb.mjgl.typehandler.LocalDateTimeTypeHandler},
+            #{updatedAt, typeHandler=com.zjb.mjgl.typehandler.LocalDateTimeTypeHandler}
+        )
+    </insert>
+
+    <select id="selectById" parameterType="java.lang.String" resultType="com.zjb.mjgl.pojo.entity.MoldScrapApplications">
+        SELECT
+            id,
+            mold_id AS moldId,
+            applicant_id AS applicantId,
+            applicant_name AS applicantName,
+            reason,
+            status,
+            approver_id AS approverId,
+            approver_name AS approverName,
+            approval_comment AS approvalComment,
+            approved_at AS approvedAt,
+            handler_id AS handlerId,
+            handler_name AS handlerName,
+            handler_comment AS handlerComment,
+            handled_at AS handledAt,
+            created_at AS createdAt,
+            updated_at AS updatedAt
+        FROM mold_scrap_applications
+        WHERE id = #{id}
+    </select>
+
+    <select id="listByCondition" resultMap="scrapApplicationVoMap">
+        SELECT
+            a.id,
+            a.mold_id,
+            m.mold_code,
+            m.name AS mold_name,
+            a.reason,
+            a.status,
+            a.applicant_name,
+            a.approver_name,
+            a.handler_name,
+            a.approval_comment,
+            a.handler_comment,
+            a.created_at,
+            a.approved_at,
+            a.handled_at
+        FROM mold_scrap_applications a
+                 LEFT JOIN molds m ON a.mold_id = m.id
+        <where>
+            <if test="moldId != null and moldId != ''">
+                AND a.mold_id = #{moldId}
+            </if>
+            <if test="status != null">
+                AND a.status = #{status}
+            </if>
+        </where>
+        ORDER BY a.created_at DESC
+    </select>
+
+    <update id="updateApproval">
+        UPDATE mold_scrap_applications
+        SET status = #{status},
+            approval_comment = #{approvalComment},
+            approver_id = #{approverId},
+            approver_name = #{approverName},
+            approved_at = #{approvedAt, typeHandler=com.zjb.mjgl.typehandler.LocalDateTimeTypeHandler},
+            updated_at = #{approvedAt, typeHandler=com.zjb.mjgl.typehandler.LocalDateTimeTypeHandler}
+        WHERE id = #{id}
+    </update>
+
+    <update id="updateExecute">
+        UPDATE mold_scrap_applications
+        SET status = #{status},
+            handler_id = #{handlerId},
+            handler_name = #{handlerName},
+            handler_comment = #{handlerComment},
+            handled_at = #{handledAt, typeHandler=com.zjb.mjgl.typehandler.LocalDateTimeTypeHandler},
+            updated_at = #{handledAt, typeHandler=com.zjb.mjgl.typehandler.LocalDateTimeTypeHandler}
+        WHERE id = #{id}
+    </update>
+
+</mapper>
+

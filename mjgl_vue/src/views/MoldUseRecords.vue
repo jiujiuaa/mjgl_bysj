@@ -195,14 +195,6 @@
                                 详情
                               </button>
                               <button
-                                v-if="isAdmin && record.status === 3"
-                                class="action-btn status-btn"
-                                :disabled="rowLoadingId === record.id"
-                                @click="openApprovalDialog(record)"
-                              >
-                                审批
-                              </button>
-                              <button
                                 class="action-btn edit-btn"
                                 @click="handleEdit(record)"
                               >
@@ -269,6 +261,16 @@
                 <input v-model="editForm.moldName" class="form-input" disabled />
               </div>
             </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>使用类型</label>
+                <input
+                  :value="formatUsageType(editForm.usageType)"
+                  class="form-input"
+                  disabled
+                />
+              </div>
+            </div>
 
             <div class="form-section-title">预计时间</div>
             <div class="form-row">
@@ -304,8 +306,13 @@
               </div>
             </div>
 
-            <div class="form-section-title">借用与归还信息</div>
-            <div class="form-row">
+            <div
+              v-if="!isEndUseMode && shouldShowBorrowerFields"
+              class="form-section-title"
+            >
+              借用与归还信息
+            </div>
+            <div v-if="!isEndUseMode && shouldShowBorrowerFields" class="form-row">
               <div class="form-group">
                 <label for="borrowerName">借用人</label>
                 <input
@@ -475,6 +482,57 @@
               <label>审批结果</label>
               <div class="form-input readonly-text">
                 {{ formatApprovalStatus(detailRecord.usageApprovalStatus) }}
+              </div>
+            </div>
+            <div class="form-group">
+              <label>审批意见</label>
+              <div class="form-input readonly-text">{{ detailRecord.usageApprovalComment || '-' }}</div>
+            </div>
+          </div>
+
+          <div class="form-section-title">时间线</div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>申请</label>
+              <div class="form-input readonly-text">
+                {{ detailRecord.applicantName || '-' }} / {{ formatDate(detailRecord.createdAt) }}
+              </div>
+            </div>
+            <div class="form-group">
+              <label>申请原因</label>
+              <div class="form-input readonly-text">{{ detailRecord.purpose || '-' }}</div>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>领用/开始</label>
+              <div class="form-input readonly-text">{{ formatDate(detailRecord.actualStartTime) }}</div>
+            </div>
+            <div class="form-group">
+              <label>借用人</label>
+              <div class="form-input readonly-text">{{ detailRecord.borrowerName || '-' }}</div>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>归还/验收</label>
+              <div class="form-input readonly-text">
+                {{ formatDate(detailRecord.actualEndTime) }} /
+                <span v-if="detailRecord.inspectionPassed === true" class="status-normal">通过</span>
+                <span v-else-if="detailRecord.inspectionPassed === false" class="status-danger">未通过</span>
+                <span v-else>-</span>
+              </div>
+            </div>
+            <div class="form-group">
+              <label>归还备注</label>
+              <div class="form-input readonly-text">{{ detailRecord.returnRemarks || '-' }}</div>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>审批/处理人</label>
+              <div class="form-input readonly-text">
+                {{ detailRecord.usageApproverName || '-' }} / {{ formatDate(detailRecord.usageApprovalTime) }}
               </div>
             </div>
             <div class="form-group">
@@ -740,6 +798,7 @@ const approvalDialogError = ref('')
 const editForm = reactive({
   id: '',
   moldId: '',
+  usageType: null,
   moldCode: '',
   moldName: '',
   moldCategory: '',
@@ -773,6 +832,7 @@ const isManager = computed(() => {
 })
 
 const isAdmin = computed(() => authStore.role === 'ADMIN')
+const shouldShowBorrowerFields = computed(() => Number(editForm.usageType) === 2)
 
 const filteredRecords = computed(() => {
   return records.value.filter((r) => {
@@ -892,6 +952,7 @@ const handleEdit = async (record, endUse = false) => {
 
     editForm.id = record.id
     editForm.moldId = detail.moldId || record.moldId || ''
+    editForm.usageType = detail.usageType ?? record.usageType ?? null
     editForm.moldCode = record.moldCode
     editForm.moldName = record.moldName
     // moldCategory 由后端 VO 提供
@@ -1010,8 +1071,10 @@ const handleSave = async () => {
     moldId: editForm.moldId,
     actualStartTime: normalizeForBackend(rawStart),
     actualEndTime: normalizeForBackend(rawEnd),
-    borrowerName: editForm.borrowerName || null,
-    borrowerCompany: editForm.borrowerCompany || null,
+    borrowerName:
+      !isEndUseMode.value && shouldShowBorrowerFields.value ? editForm.borrowerName || null : null,
+    borrowerCompany:
+      !isEndUseMode.value && shouldShowBorrowerFields.value ? editForm.borrowerCompany || null : null,
     purpose: editForm.purpose || null,
     inspectionPassed:
       editForm.inspectionPassed === null ? null : !!editForm.inspectionPassed,
