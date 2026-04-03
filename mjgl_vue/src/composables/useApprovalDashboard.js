@@ -1,4 +1,5 @@
 import { ref } from 'vue'
+import { APPROVAL_DASHBOARD_PAGE_SIZE } from '@/constants/appConfig'
 import { fetchAllUseRecords, approveUseRecord } from '@/api/useRecords'
 import { queryMaintenanceLogs, approveMaintenanceLog } from '@/api/maintenanceLogs'
 import { queryRepairRecords, approveRepairRecord } from '@/api/repairRecords'
@@ -18,8 +19,8 @@ export const useApprovalDashboard = () => {
     try {
       const [useRes, maintenanceRes, repairRes, scrapRes] = await Promise.all([
         fetchAllUseRecords(),
-        queryMaintenanceLogs({}, 1, 200),
-        queryRepairRecords({}, 1, 200),
+        queryMaintenanceLogs({}, 1, APPROVAL_DASHBOARD_PAGE_SIZE),
+        queryRepairRecords({}, 1, APPROVAL_DASHBOARD_PAGE_SIZE),
         fetchMoldScrapApplications({ status: 1 }),
       ])
 

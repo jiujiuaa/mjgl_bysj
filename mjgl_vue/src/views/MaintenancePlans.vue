@@ -434,6 +434,7 @@ import {
   enableMaintenancePlan,
   disableMaintenancePlan,
 } from '@/api/maintenancePlans'
+import { LIST_PAGE_SIZE_MAX } from '@/constants/appConfig'
 import { fetchMolds } from '@/api/molds'
 
 const router = useRouter()
@@ -497,7 +498,7 @@ const molds = ref([])
 
 const loadMolds = async () => {
   try {
-    const res = await fetchMolds(1, 1000)
+    const res = await fetchMolds(1, LIST_PAGE_SIZE_MAX)
     molds.value = res.data?.list ?? []
   } catch (e) {
     // 静默失败，不影响主流程

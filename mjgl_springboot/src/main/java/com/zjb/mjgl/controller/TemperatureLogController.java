@@ -6,6 +6,7 @@ import com.zjb.mjgl.pojo.dto.TemperatureLogQueryParam;
 import com.zjb.mjgl.pojo.entity.TemperatureLogs;
 import com.zjb.mjgl.pojo.vo.TemperatureLogVO;
 import com.zjb.mjgl.service.TemperatureLogService;
+import com.zjb.mjgl.web.DynamicPageSize;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -35,7 +36,7 @@ public class TemperatureLogController {
     @PostMapping("/query")
     public Result<PageInfo<TemperatureLogVO>> query(@RequestBody(required = false) TemperatureLogQueryParam param,
                                                     @RequestParam(defaultValue = "1") int pageNum,
-                                                    @RequestParam(defaultValue = "10") int pageSize) {
+                                                    @DynamicPageSize int pageSize) {
         TemperatureLogQueryParam effective = Optional.ofNullable(param)
                 .orElseGet(TemperatureLogQueryParam::new);
         return Result.success(temperatureLogService.queryByCondition(effective, pageNum, pageSize));
@@ -44,7 +45,7 @@ public class TemperatureLogController {
     @GetMapping("/mold/{moldId}")
     public Result<PageInfo<TemperatureLogs>> listByMold(@PathVariable String moldId,
                                                         @RequestParam(defaultValue = "1") int pageNum,
-                                                        @RequestParam(defaultValue = "10") int pageSize) {
+                                                        @DynamicPageSize int pageSize) {
         return temperatureLogService.getByMoldId(moldId, pageNum, pageSize);
     }
 

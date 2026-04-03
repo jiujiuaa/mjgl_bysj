@@ -1,9 +1,13 @@
 package com.zjb.mjgl.utils;
 
 
+import com.zjb.mjgl.common.BusinessConfigKeys;
+import com.zjb.mjgl.service.SystemBusinessConfigService;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
@@ -15,9 +19,11 @@ import java.util.function.Function;
 @Component
 public class JwtUtil {
 
-    private static final String SECRET_KEY = "ThisIsAVeryVeryVeryVeryVeryVeryLongSecretKeyForHS512AlgorithmToBeSecureAndCompliantWithRFC7518Specification";
+    @Value("${jwt.secret}")
+    private String secretKey;
 
-    private final long EXPIRATION_TIME = 86400000; // 24 小时
+    @Autowired
+    private SystemBusinessConfigService systemBusinessConfigService;
 
     public String generateToken(UserDetails userDetails) {
         Map<String, Object> claims = new HashMap<>();
@@ -25,12 +31,13 @@ public class JwtUtil {
     }
 
     private String createToken(Map<String, Object> claims, String subject) {
+        long expMs = systemBusinessConfigService.getEffectiveLong(BusinessConfigKeys.JWT_EXPIRATION_MS);
         return Jwts.builder()
                 .setClaims(claims)
                 .setSubject(subject)
                 .setIssuedAt(new Date(System.currentTimeMillis()))
-                .setExpiration(new Date(System.currentTimeMillis() + EXPIRATION_TIME))
-                .signWith(SignatureAlgorithm.HS512, SECRET_KEY)
+                .setExpiration(new Date(System.currentTimeMillis() + expMs))
+                .signWith(SignatureAlgorithm.HS512, secretKey)
                 .compact();
     }
 
@@ -53,7 +60,7 @@ public class JwtUtil {
     }
 
     private Claims extractAllClaims(String token) {
-        return Jwts.parser().setSigningKey(SECRET_KEY).parseClaimsJws(token).getBody();
+        return Jwts.parser().setSigningKey(secretKey).parseClaimsJws(token).getBody();
     }
 
     private Boolean isTokenExpired(String token) {

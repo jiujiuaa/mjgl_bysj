@@ -350,7 +350,7 @@ public class HealthReportServiceImpl implements HealthReportService {
             ));
 
             if (vo.getPdfFilePath() != null && !vo.getPdfFilePath().trim().isEmpty()) {
-                vo.setPdfUrl(minioUtil.getObjectUrl(vo.getPdfFilePath(), 7));
+                vo.setPdfUrl(minioUtil.getPresignedObjectUrl(vo.getPdfFilePath()));
             }
         });
 
@@ -403,7 +403,7 @@ public class HealthReportServiceImpl implements HealthReportService {
                     ));
 
                     if (vo.getPdfFilePath() != null && !vo.getPdfFilePath().trim().isEmpty()) {
-                        vo.setPdfUrl(minioUtil.getObjectUrl(vo.getPdfFilePath(), 7));
+                        vo.setPdfUrl(minioUtil.getPresignedObjectUrl(vo.getPdfFilePath()));
                     }
 
                     return Result.success(vo);

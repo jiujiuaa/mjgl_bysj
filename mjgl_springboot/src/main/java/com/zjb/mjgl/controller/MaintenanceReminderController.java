@@ -6,6 +6,7 @@ import com.zjb.mjgl.pojo.dto.MaintenanceReminderQueryParam;
 import com.zjb.mjgl.pojo.entity.MaintenanceReminder;
 import com.zjb.mjgl.pojo.vo.MaintenanceReminderVO;
 import com.zjb.mjgl.service.MaintenanceReminderService;
+import com.zjb.mjgl.web.DynamicPageSize;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -32,7 +33,7 @@ public class MaintenanceReminderController {
     public Result<PageInfo<MaintenanceReminderVO>> query(
             @RequestBody(required = false) MaintenanceReminderQueryParam param,
             @RequestParam(defaultValue = "1") int pageNum,
-            @RequestParam(defaultValue = "10") int pageSize) {
+            @DynamicPageSize int pageSize) {
         try {
             MaintenanceReminderQueryParam effective = param != null ? param : new MaintenanceReminderQueryParam();
             log.info("收到保养提醒分页查询请求, pageNum={}, pageSize={}, 条件={}", pageNum, pageSize, effective);

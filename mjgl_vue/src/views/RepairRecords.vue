@@ -911,6 +911,7 @@ import { computed, onMounted, reactive, ref } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import AppSidebar from '@/components/AppSidebar.vue'
+import { LIST_PAGE_SIZE_MAX } from '@/constants/appConfig'
 import { fetchMolds } from '@/api/molds'
 import { uploadBizFiles, getFilePreviewUrl, fetchBizFiles, deleteFiles } from '@/api/files'
 import { useTableMultiSelect } from '@/composables/useTableMultiSelect'
@@ -1086,7 +1087,7 @@ const loadMoldOptions = async () => {
   if (moldOptionsLoaded.value || moldOptionsLoading.value) return
   moldOptionsLoading.value = true
   try {
-    const res = await fetchMolds(1, 1000)
+    const res = await fetchMolds(1, LIST_PAGE_SIZE_MAX)
     moldOptions.value = res.data?.list || []
     moldOptionsLoaded.value = true
   } catch (e) {

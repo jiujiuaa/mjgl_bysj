@@ -7,6 +7,7 @@ import com.zjb.mjgl.pojo.dto.RepairQueryParam;
 import com.zjb.mjgl.pojo.dto.RepairRecordDTO;
 import com.zjb.mjgl.pojo.vo.RepairRecordVO;
 import com.zjb.mjgl.service.RepairService;
+import com.zjb.mjgl.web.DynamicPageSize;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -71,7 +72,7 @@ public class RepairController {
     @PostMapping("/query")
     public Result<PageInfo<RepairRecordVO>> query(@RequestBody(required = false) RepairQueryParam repairQueryParam,
                                                   @RequestParam(defaultValue = "1") int pageNum,
-                                                  @RequestParam(defaultValue = "10") int pageSize) {
+                                                  @DynamicPageSize int pageSize) {
         RepairQueryParam effective = Optional.ofNullable(repairQueryParam)
                 .orElseGet(RepairQueryParam::new);
         return Result.success(repairService.queryByCondition(effective, pageNum, pageSize));

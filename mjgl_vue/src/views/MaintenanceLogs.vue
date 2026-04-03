@@ -495,6 +495,7 @@ import {
   createMaintenanceLog,
   approveMaintenanceLog,
 } from '@/api/maintenanceLogs'
+import { LIST_PAGE_SIZE_MAX } from '@/constants/appConfig'
 import { fetchMolds } from '@/api/molds'
 import { queryMaintenancePlans } from '@/api/maintenancePlans'
 import { uploadBizFiles, getFilePreviewUrl, fetchBizFiles, deleteFiles } from '@/api/files'
@@ -611,7 +612,7 @@ const loadLogs = async () => {
 
 const loadMolds = async () => {
   try {
-    const res = await fetchMolds(1, 1000)
+    const res = await fetchMolds(1, LIST_PAGE_SIZE_MAX)
     molds.value = res.data?.list ?? []
   } catch (e) {
     console.error(e)
@@ -628,7 +629,7 @@ const loadPlansForMold = async (moldId) => {
     const res = await queryMaintenancePlans(
       { bindMoldId: moldId },
       1,
-      1000,
+      LIST_PAGE_SIZE_MAX,
     )
     const data = res.data || {}
     plans.value = data.list ?? []

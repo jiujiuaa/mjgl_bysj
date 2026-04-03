@@ -12,7 +12,9 @@ import com.zjb.mjgl.pojo.entity.MaintenanceReminder;
 import com.zjb.mjgl.pojo.entity.Molds;
 import com.zjb.mjgl.pojo.entity.MaintenancePlans;
 import com.zjb.mjgl.pojo.vo.MaintenancePlanWithMoldVO;
+import com.zjb.mjgl.common.BusinessConfigKeys;
 import com.zjb.mjgl.service.MaintenancePlansService;
+import com.zjb.mjgl.service.SystemBusinessConfigService;
 import com.zjb.mjgl.utils.IdUtil;
 import com.zjb.mjgl.utils.UserUtils;
 import lombok.extern.slf4j.Slf4j;
@@ -29,6 +31,9 @@ import java.util.stream.Collectors;
 @Service
 @Slf4j
 public class MaintenancePlansServiceImpl implements MaintenancePlansService {
+
+    @Autowired
+    private SystemBusinessConfigService systemBusinessConfigService;
 
     @Autowired
     private MaintenancePlanMapper maintenancePlanMapper;
@@ -199,8 +204,8 @@ public class MaintenancePlansServiceImpl implements MaintenancePlansService {
             // 1) 按时间周期：scheduledDayOfMonth 不为空
             if (plan.getScheduledDayOfMonth() != null) {
                 reminder.setReminderType(1);
-                // 简单认为间隔值为 30 天，仅作展示
-                reminder.setIntervalValue(30);
+                // 按配置近似展示“日历周期”间隔天数（如按月固定日）
+                reminder.setIntervalValue(systemBusinessConfigService.getEffectiveInt(BusinessConfigKeys.MAINTENANCE_REMINDER_CALENDAR_INTERVAL_DAYS));
                 // 计算下一次保养日期：本月的该日，如果已过则下个月
                 LocalDate today = LocalDate.now();
                 int day = plan.getScheduledDayOfMonth();

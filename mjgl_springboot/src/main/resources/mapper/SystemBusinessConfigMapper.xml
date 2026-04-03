@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zjb.mjgl.mapper.SystemBusinessConfigMapper">
+
+    <resultMap id="BaseMap" type="com.zjb.mjgl.pojo.entity.SystemBusinessConfig">
+        <id property="id" column="id"/>
+        <result property="configKey" column="config_key"/>
+        <result property="configValue" column="config_value"/>
+        <result property="label" column="label"/>
+        <result property="description" column="description"/>
+        <result property="valueType" column="value_type"/>
+        <result property="sortOrder" column="sort_order"/>
+    </resultMap>
+
+    <select id="selectAllOrdered" resultMap="BaseMap">
+        SELECT id, config_key, config_value, label, description, value_type, sort_order
+        FROM system_business_config
+        ORDER BY sort_order ASC, config_key ASC
+    </select>
+
+    <select id="selectByKey" resultMap="BaseMap">
+        SELECT id, config_key, config_value, label, description, value_type, sort_order
+        FROM system_business_config
+        WHERE config_key = #{configKey}
+    </select>
+
+    <insert id="insert">
+        INSERT INTO system_business_config (id, config_key, config_value, label, description, value_type, sort_order)
+        VALUES (#{id}, #{configKey}, #{configValue}, #{label}, #{description}, #{valueType}, #{sortOrder})
+    </insert>
+
+    <update id="updateValueByKey">
+        UPDATE system_business_config
+        SET config_value = #{configValue}
+        WHERE config_key = #{configKey}
+    </update>
+</mapper>

@@ -5,6 +5,7 @@ import com.zjb.mjgl.common.Result;
 import com.zjb.mjgl.pojo.dto.AlertRecordQueryParam;
 import com.zjb.mjgl.pojo.vo.AlertRecordVO;
 import com.zjb.mjgl.service.AlertRecordService;
+import com.zjb.mjgl.web.DynamicPageSize;
 import com.zjb.mjgl.service.AlertRuleEngineService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -31,7 +32,7 @@ public class AlertRecordController {
     public Result<PageInfo<AlertRecordVO>> query(
             @RequestBody(required = false) AlertRecordQueryParam param,
             @RequestParam(defaultValue = "1") int pageNum,
-            @RequestParam(defaultValue = "10") int pageSize) {
+            @DynamicPageSize int pageSize) {
         AlertRecordQueryParam effective = Optional.ofNullable(param).orElseGet(AlertRecordQueryParam::new);
         return Result.success(alertRecordService.queryByCondition(effective, pageNum, pageSize));
     }

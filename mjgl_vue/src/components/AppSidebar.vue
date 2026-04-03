@@ -15,7 +15,6 @@
         <img class="menu-icon" src="/查看.png" alt="用户管理" />
         <span>用户管理</span>
       </div>
-
       <!-- 顶级：模具管理 -->
       <div
         v-if="canAccess('/mold-management')"
@@ -268,7 +267,7 @@ const handleLogout = () => {
   height: 100vh;
   width: 220px;
   z-index: 100;
-  background: #1e3c72;
+  background: linear-gradient(180deg, #1e3a8a 0%, #1e3c72 45%, #1d4f91 100%);
   color: #e5e7eb;
   display: flex;
   flex-direction: column;
@@ -335,11 +334,11 @@ const handleLogout = () => {
   align-items: center;
   gap: 8px;
   padding: 10px 12px;
-  border-radius: 6px;
+  border-radius: 10px;
   cursor: pointer;
   color: #e5e7eb;
   font-size: 14px;
-  transition: background 0.2s, color 0.2s;
+  transition: background 0.2s, color 0.2s, transform 0.15s;
 }
 
 .parent-item {
@@ -367,7 +366,8 @@ const handleLogout = () => {
 }
 
 .menu-item.active {
-  background: #2563eb;
+  background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
+  box-shadow: 0 8px 18px rgba(37, 99, 235, 0.35);
 }
 
 .menu-item.active .menu-icon,
@@ -378,7 +378,8 @@ const handleLogout = () => {
 }
 
 .menu-item:not(.active):hover {
-  background: rgba(148, 163, 184, 0.25);
+  background: rgba(191, 219, 254, 0.2);
+  transform: translateX(2px);
 }
 
 .menu-item.disabled {
@@ -388,7 +389,7 @@ const handleLogout = () => {
 
 .sidebar-footer {
   padding-top: 12px;
-  border-top: 1px solid rgba(148, 163, 184, 0.4);
+  border-top: 1px solid rgba(191, 219, 254, 0.35);
   display: flex;
   flex-direction: column;
   gap: 8px;

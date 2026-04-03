@@ -7,6 +7,7 @@ import com.zjb.mjgl.pojo.dto.MoldAbnormalRecordQueryParam;
 import com.zjb.mjgl.pojo.entity.MoldAbnormalRecord;
 import com.zjb.mjgl.pojo.vo.MoldAbnormalRecordVO;
 import com.zjb.mjgl.service.MoldAbnormalRecordService;
+import com.zjb.mjgl.web.DynamicPageSize;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -51,7 +52,7 @@ public class MoldAbnormalRecordController {
     public Result<PageInfo<MoldAbnormalRecordVO>> query(
             @RequestBody(required = false) MoldAbnormalRecordQueryParam param,
             @RequestParam(defaultValue = "1") int pageNum,
-            @RequestParam(defaultValue = "10") int pageSize) {
+            @DynamicPageSize int pageSize) {
         MoldAbnormalRecordQueryParam effective = Optional.ofNullable(param)
                 .orElseGet(MoldAbnormalRecordQueryParam::new);
         return Result.success(moldAbnormalRecordService.queryByCondition(effective, pageNum, pageSize));
@@ -64,7 +65,7 @@ public class MoldAbnormalRecordController {
     public Result<PageInfo<MoldAbnormalRecord>> listByMold(
             @PathVariable String moldId,
             @RequestParam(defaultValue = "1") int pageNum,
-            @RequestParam(defaultValue = "10") int pageSize) {
+            @DynamicPageSize int pageSize) {
         return moldAbnormalRecordService.getByMoldId(moldId, pageNum, pageSize);
     }
 

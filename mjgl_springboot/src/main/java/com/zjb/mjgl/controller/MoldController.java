@@ -7,6 +7,7 @@ import com.zjb.mjgl.pojo.dto.MoldParam;
 import com.zjb.mjgl.pojo.dto.MoldQueryParam;
 import com.zjb.mjgl.pojo.vo.MoldDetailVO;
 import com.zjb.mjgl.service.MoldService;
+import com.zjb.mjgl.web.DynamicPageSize;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -83,7 +84,7 @@ public class MoldController {
     @GetMapping("/allmolds")
     public Result<PageInfo<MoldDetailVO>> list(
             @RequestParam(defaultValue = "1") int pageNum,
-            @RequestParam(defaultValue = "10") int pageSize) {
+            @DynamicPageSize int pageSize) {
         try {
             return Result.success(moldService.listAllAsDetail(pageNum, pageSize));
         } catch (Exception e) {
@@ -98,7 +99,7 @@ public class MoldController {
     @PostMapping("/query")
     public Result<PageInfo<MoldDetailVO>> query(@RequestBody MoldQueryParam param,
                                                @RequestParam(defaultValue = "1") int pageNum,
-                                               @RequestParam(defaultValue = "10") int pageSize) {
+                                               @DynamicPageSize int pageSize) {
         try {
             return Result.success(moldService.queryByCondition(param, pageNum, pageSize));
         } catch (Exception e) {

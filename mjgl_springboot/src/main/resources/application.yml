@@ -1,3 +1,6 @@
+server:
+  port: 8080
+
 spring:
   datasource:
     url: jdbc:mysql://8.137.124.63:3306/db_mjgl?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
@@ -19,9 +22,28 @@ minio:
   access-key: minio_3ETHEQ
   secret-key: minio_txb8if
   bucket-name: mjgl-bucket
+  # 预签名下载/预览 URL 有效期（天）
+  presign-expire-days: ${MINIO_PRESIGN_EXPIRE_DAYS:7}
+
+# JWT：生产环境务必通过环境变量 JWT_SECRET 覆盖
+jwt:
+  secret: ${JWT_SECRET:ThisIsAVeryVeryVeryVeryVeryVeryLongSecretKeyForHS512AlgorithmToBeSecureAndCompliantWithRFC7518Specification}
+  expiration-ms: ${JWT_EXPIRATION_MS:86400000}
 
 # 定时任务配置
 app:
+  pagination:
+    default-page-size: ${APP_DEFAULT_PAGE_SIZE:10}
+  websocket:
+    # 多个来源用英文逗号分隔，例如 https://a.com,https://b.com
+    allowed-origin-patterns: ${APP_WS_ALLOWED_ORIGINS:*}
+  alert:
+    rule-default-days: ${APP_ALERT_RULE_DEFAULT_DAYS:30}
+    rule-default-threshold: ${APP_ALERT_RULE_DEFAULT_THRESHOLD:3}
+    metric-default-window-days: ${APP_ALERT_METRIC_DEFAULT_WINDOW_DAYS:7}
+  maintenance:
+    # 按“每月固定日”策略生成提醒时，用于展示的间隔天数近似值
+    reminder-calendar-interval-days: ${APP_MAINTENANCE_REMINDER_CALENDAR_INTERVAL_DAYS:30}
   job:
     # 智能预警规则引擎：按 cron 表达式执行，满足条件的模具会生成报警（如近30天故障≥3次）
     alert-rule:
@@ -29,4 +51,7 @@ app:
     # 健康评估：按日期判断需要生成周/月/季度报告
     health-report:
       daily-cron: "0 10 0 * * ?"
+    # 保养提醒扫描（与业务配置中心可互相覆盖，以库中配置为准）
+    maintenance-reminder:
+      cron: "0 0 3 * * ?"
 

@@ -8,6 +8,7 @@ import com.zjb.mjgl.pojo.dto.MaintenancePlanQueryParam;
 import com.zjb.mjgl.pojo.entity.MaintenancePlans;
 import com.zjb.mjgl.pojo.vo.MaintenancePlanWithMoldVO;
 import com.zjb.mjgl.service.MaintenancePlansService;
+import com.zjb.mjgl.web.DynamicPageSize;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -83,7 +84,7 @@ public class MaintenancePlansController {
     @PostMapping("/query")
     public Result<PageInfo<MaintenancePlanWithMoldVO>> query(@RequestBody MaintenancePlanQueryParam maintenancePlanQueryParam,
                                                              @RequestParam(defaultValue = "1") int pageNum,
-                                                             @RequestParam(defaultValue = "10") int pageSize){
+                                                             @DynamicPageSize int pageSize){
         try {
             return Result.success(maintenancePlansService.query(maintenancePlanQueryParam,pageNum,pageSize));
         } catch (Exception e) {

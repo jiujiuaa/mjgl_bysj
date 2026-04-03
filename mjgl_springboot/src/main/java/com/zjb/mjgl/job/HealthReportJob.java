@@ -4,7 +4,6 @@ import com.zjb.mjgl.pojo.dto.HealthReportGenerateParam;
 import com.zjb.mjgl.service.HealthReportService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
@@ -19,7 +18,7 @@ public class HealthReportJob {
     /**
      * 每日执行一次，根据日期判断是否需要生成周/月/季度报表。
      */
-    @Scheduled(cron = "${app.job.health-report.daily-cron:0 10 0 * * ?}")
+    /** 由 {@link BusinessJobScheduler} 按配置 Cron 调用 */
     public void runDaily() {
         LocalDate today = LocalDate.now();
         boolean exportPdf = true;

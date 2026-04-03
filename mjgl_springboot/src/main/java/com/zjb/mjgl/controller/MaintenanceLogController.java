@@ -7,6 +7,7 @@ import com.zjb.mjgl.pojo.dto.MaintenanceLogQueryParam;
 import com.zjb.mjgl.pojo.entity.MaintenanceLogs;
 import com.zjb.mjgl.pojo.vo.MaintenanceLogVO;
 import com.zjb.mjgl.service.MaintenanceLogService;
+import com.zjb.mjgl.web.DynamicPageSize;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -33,7 +34,7 @@ public class MaintenanceLogController {
     public Result<PageInfo<MaintenanceLogs>> getRecordById(@PathVariable String id,
                                                            @RequestParam(required = false, defaultValue = "mold") String type,
                                                            @RequestParam(defaultValue = "1") int pageNum,
-                                                           @RequestParam(defaultValue = "10") int pageSize) {
+                                                           @DynamicPageSize int pageSize) {
         if (id == null || id.trim().isEmpty()) {
             log.warn("根据ID查询保养记录失败, id 为空");
             return Result.fail("id不能为空");
@@ -54,7 +55,7 @@ public class MaintenanceLogController {
     @PostMapping("/query")
     public Result<PageInfo<MaintenanceLogVO>> query(@RequestBody(required = false) MaintenanceLogQueryParam param,
                                                     @RequestParam(defaultValue = "1") int pageNum,
-                                                    @RequestParam(defaultValue = "10") int pageSize) {
+                                                    @DynamicPageSize int pageSize) {
         MaintenanceLogQueryParam effective = Optional.ofNullable(param)
                 .orElseGet(MaintenanceLogQueryParam::new);
         return Result.success(maintenanceLogService.queryByCondition(effective, pageNum, pageSize));

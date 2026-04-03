@@ -126,6 +126,7 @@
 import { ref, reactive, onMounted, watch } from 'vue'
 import * as echarts from 'echarts'
 import AppSidebar from '@/components/AppSidebar.vue'
+import { LIST_PAGE_SIZE_MAX } from '@/constants/appConfig'
 import { fetchMolds } from '@/api/molds'
 import { queryMoldStats, queryMoldTrends, exportMoldStatsXlsx } from '@/api/moldStatistics'
 
@@ -297,7 +298,7 @@ const handleExportXlsx = async () => {
 onMounted(async () => {
   initDefaultRange()
   try {
-    const res = await fetchMolds(1, 1000)
+    const res = await fetchMolds(1, LIST_PAGE_SIZE_MAX)
     molds.value = res.data?.list ?? []
   } catch (e) {
     console.error(e)

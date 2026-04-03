@@ -747,6 +747,7 @@ import {
   batchDeleteUseRecords,
   approveUseRecord,
 } from '@/api/useRecords'
+import { LIST_PAGE_SIZE_MAX } from '@/constants/appConfig'
 import { fetchMolds } from '@/api/molds'
 
 const router = useRouter()
@@ -894,7 +895,7 @@ const loadMoldOptions = async () => {
   if (moldOptionsLoaded.value || moldOptionsLoading.value) return
   moldOptionsLoading.value = true
   try {
-    const res = await fetchMolds(1, 1000)
+    const res = await fetchMolds(1, LIST_PAGE_SIZE_MAX)
     moldOptions.value = res.data?.list || []
     moldOptionsLoaded.value = true
   } catch (e) {

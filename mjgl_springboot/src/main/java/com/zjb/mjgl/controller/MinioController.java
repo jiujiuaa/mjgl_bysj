@@ -170,7 +170,7 @@ public class MinioController {
                         map.put("objectName", item.objectName());
                         map.put("size", item.size());
                         map.put("lastModified", item.lastModified() != null ? item.lastModified().toString() : null);
-                        map.put("url", minioUtil.getObjectUrl(item.objectName(), 7));
+                        map.put("url", minioUtil.getPresignedObjectUrl(item.objectName()));
                         return map;
                     })
                     .collect(Collectors.toList());

@@ -9,6 +9,7 @@ export const ROLE = Object.freeze({
 
 export const ROUTE_ROLE_MAP = Object.freeze({
   '/user-management': [ROLE.ADMIN],
+  '/business-config': [ROLE.ADMIN],
   '/alert-rules': [ROLE.ADMIN],
   '/approval-center': [ROLE.ADMIN],
   '/alert-test': [ROLE.ADMIN],

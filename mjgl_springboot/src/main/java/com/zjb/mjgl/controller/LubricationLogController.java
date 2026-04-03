@@ -6,6 +6,7 @@ import com.zjb.mjgl.pojo.dto.LubricationLogQueryParam;
 import com.zjb.mjgl.pojo.entity.LubricationLogs;
 import com.zjb.mjgl.pojo.vo.LubricationLogVO;
 import com.zjb.mjgl.service.LubricationLogService;
+import com.zjb.mjgl.web.DynamicPageSize;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -35,7 +36,7 @@ public class LubricationLogController {
     @PostMapping("/query")
     public Result<PageInfo<LubricationLogVO>> query(@RequestBody(required = false) LubricationLogQueryParam param,
                                                     @RequestParam(defaultValue = "1") int pageNum,
-                                                    @RequestParam(defaultValue = "10") int pageSize) {
+                                                    @DynamicPageSize int pageSize) {
         LubricationLogQueryParam effective = Optional.ofNullable(param)
                 .orElseGet(LubricationLogQueryParam::new);
         return Result.success(lubricationLogService.queryByCondition(effective, pageNum, pageSize));
@@ -44,7 +45,7 @@ public class LubricationLogController {
     @GetMapping("/mold/{moldId}")
     public Result<PageInfo<LubricationLogs>> listByMold(@PathVariable String moldId,
                                                         @RequestParam(defaultValue = "1") int pageNum,
-                                                        @RequestParam(defaultValue = "10") int pageSize) {
+                                                        @DynamicPageSize int pageSize) {
         return lubricationLogService.getByMoldId(moldId, pageNum, pageSize);
     }
 

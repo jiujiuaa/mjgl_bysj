@@ -82,8 +82,7 @@ public class FilesServiceImpl implements FilesService {
         if (file == null || file.getFileName() == null) {
             throw new IllegalArgumentException("文件不存在或未找到对应对象名");
         }
-        // 生成7天有效的预览URL
-        return minioUtil.getObjectUrl(file.getFileName(), 7);
+        return minioUtil.getPresignedObjectUrl(file.getFileName());
     }
 
     @Override

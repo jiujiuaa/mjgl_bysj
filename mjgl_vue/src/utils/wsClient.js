@@ -3,15 +3,16 @@ import { Client } from '@stomp/stompjs'
 
 let stompClient = null
 
-const WS_ENDPOINT = '/ws'
+const wsPath = import.meta.env.VITE_WS_PATH || '/ws'
+const reconnectDelayMs = Number(import.meta.env.VITE_WS_RECONNECT_DELAY_MS)
 
 export const connectWebSocket = (onMessageCallback, userId) =>
   new Promise((resolve, reject) => {
-    const socketFactory = () => new SockJS(WS_ENDPOINT)
+    const socketFactory = () => new SockJS(wsPath)
 
     const client = new Client({
       webSocketFactory: socketFactory,
-      reconnectDelay: 5000,
+      reconnectDelay: Number.isFinite(reconnectDelayMs) && reconnectDelayMs > 0 ? reconnectDelayMs : 5000,
       onConnect: () => {
         const handler = (message) => {
           if (onMessageCallback) {

@@ -296,6 +296,7 @@ import { reactive, ref, onMounted, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import AppSidebar from '@/components/AppSidebar.vue'
 import { createLubricationLog, queryLubricationLogs } from '@/api/monitoringLogs'
+import { LIST_PAGE_SIZE_MAX } from '@/constants/appConfig'
 import { fetchMolds } from '@/api/molds'
 import { uploadBizFiles } from '@/api/files'
 import { useAuthStore } from '@/stores/auth'
@@ -407,7 +408,7 @@ const previewImage = (url) => {
 
 const loadMolds = async () => {
   try {
-    const res = await fetchMolds(1, 1000)
+    const res = await fetchMolds(1, LIST_PAGE_SIZE_MAX)
     molds.value = res.data?.list ?? []
     if (!form.moldId && route.query.moldId) {
       const id = String(route.query.moldId)

@@ -1,9 +1,11 @@
 import axios from 'axios'
 
+const requestTimeoutMs = Number(import.meta.env.VITE_REQUEST_TIMEOUT_MS)
+
 // 创建axios实例
 const service = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || '',
-  timeout: 10000,
+  timeout: Number.isFinite(requestTimeoutMs) && requestTimeoutMs > 0 ? requestTimeoutMs : 10000,
   headers: {
     'Content-Type': 'application/json',
   },

@@ -135,6 +135,7 @@
 import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { LIST_PAGE_SIZE_MAX } from '@/constants/appConfig'
 import { fetchMolds } from '@/api/molds'
 import { queryAlerts } from '@/api/alerts'
 import { useApprovalDashboard } from '@/composables/useApprovalDashboard'
@@ -172,9 +173,10 @@ const quickEntries = computed(() => {
     { path: '/alert-records', icon: '/消息通知.png', title: '报警管理', desc: '处理实时告警与异常' },
     { path: '/mold-statistics', icon: '/项目总览.png', title: '统计看板', desc: '查看趋势与统计分析' },
   ]
-  return canViewApproval.value
+  const withApproval = canViewApproval.value
     ? [{ path: '/approval-center', icon: '/提交.png', title: '审批中心', desc: '统一审批待办事项' }, ...base]
     : base
+  return withApproval
 })
 const visibleQuickEntries = computed(() => quickEntries.value.filter((entry) => canAccess(entry.path)))
 
@@ -215,7 +217,7 @@ const loadHomeData = async () => {
   refreshNowText()
   try {
     const tasks = [
-      fetchMolds(1, 1000),
+      fetchMolds(1, LIST_PAGE_SIZE_MAX),
       queryAlerts({ status: 1 }, 1, 5),
     ]
     if (canViewApproval.value) {

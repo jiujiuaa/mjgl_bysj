@@ -6,6 +6,8 @@ import io.minio.messages.Bucket;
 import io.minio.messages.DeleteError;
 import io.minio.messages.DeleteObject;
 import io.minio.messages.Item;
+import com.zjb.mjgl.common.BusinessConfigKeys;
+import com.zjb.mjgl.service.SystemBusinessConfigService;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,6 +29,9 @@ public class MinioUtil {
 
     @Autowired
     private MinioClient minioClient;
+
+    @Autowired
+    private SystemBusinessConfigService systemBusinessConfigService;
 
     @Value("${minio.bucket-name}")
     private String defaultBucketName;
@@ -122,7 +127,7 @@ public class MinioUtil {
         resultMap.put("fileName",fileName);
         resultMap.put("originalFilename",originalFilename);
         resultMap.put("fileSize", String.valueOf(fileSize));
-        resultMap.put("filePath", getObjectUrl(bucketName, fileName, 7));
+        resultMap.put("filePath", getPresignedObjectUrl(bucketName, fileName));
         return resultMap;
     }
 
@@ -284,6 +289,24 @@ public class MinioUtil {
     }
 
     /**
+     * 使用配置的默认有效期生成预签名 URL（默认桶）。
+     */
+    public String getPresignedObjectUrl(String objectName) {
+        return getObjectUrl(defaultBucketName, objectName, resolvePresignExpireDays());
+    }
+
+    /**
+     * 使用配置的默认有效期生成预签名 URL。
+     */
+    public String getPresignedObjectUrl(String bucketName, String objectName) {
+        return getObjectUrl(bucketName, objectName, resolvePresignExpireDays());
+    }
+
+    private int resolvePresignExpireDays() {
+        return systemBusinessConfigService.getEffectiveInt(BusinessConfigKeys.MINIO_PRESIGN_EXPIRE_DAYS);
+    }
+
+    /**
      * 检查文件是否存在
      * @param bucketName 存储桶名称
      * @param objectName 对象名称
@@ -374,7 +397,7 @@ public class MinioUtil {
         resultMap.put("originalFilename", objectName);
         resultMap.put("fileSize", String.valueOf(bytes.length));
         // 这里仅给出短期预览 URL（现有系统对 filePath 的语义即为“可下载 URL”）
-        resultMap.put("filePath", getObjectUrl(objectName, 7));
+        resultMap.put("filePath", getPresignedObjectUrl(objectName));
         return resultMap;
     }
 

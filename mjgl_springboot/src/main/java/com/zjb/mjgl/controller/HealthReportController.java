@@ -7,6 +7,7 @@ import com.zjb.mjgl.pojo.dto.HealthReportGenerateParam;
 import com.zjb.mjgl.pojo.dto.HealthReportQueryParam;
 import com.zjb.mjgl.pojo.vo.HealthReportVO;
 import com.zjb.mjgl.service.HealthReportService;
+import com.zjb.mjgl.web.DynamicPageSize;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -56,7 +57,7 @@ public class HealthReportController {
     public Result<PageInfo<HealthReportVO>> query(
             @RequestBody(required = false) HealthReportQueryParam param,
             @RequestParam(defaultValue = "1") int pageNum,
-            @RequestParam(defaultValue = "10") int pageSize) {
+            @DynamicPageSize int pageSize) {
         try {
             HealthReportQueryParam effective = param != null ? param : new HealthReportQueryParam();
             return Result.success(healthReportService.queryByCondition(effective, pageNum, pageSize));

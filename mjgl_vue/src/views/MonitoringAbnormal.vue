@@ -364,6 +364,7 @@ import AppSidebar from '@/components/AppSidebar.vue'
 import { useTableMultiSelect } from '@/composables/useTableMultiSelect'
 import { queryAbnormalRecords, deleteAbnormalRecord, batchDeleteAbnormalRecords } from '@/api/abnormalRecords'
 import { createManualAbnormal } from '@/api/monitoringLogs'
+import { LIST_PAGE_SIZE_MAX } from '@/constants/appConfig'
 import { fetchMolds } from '@/api/molds'
 import { uploadBizFiles } from '@/api/files'
 import { useAuthStore } from '@/stores/auth'
@@ -660,7 +661,7 @@ onMounted(async () => {
     query.keyword = String(route.query.moldKeyword)
   }
   try {
-    const res = await fetchMolds(1, 1000)
+    const res = await fetchMolds(1, LIST_PAGE_SIZE_MAX)
     molds.value = res.data?.list ?? []
   } catch (e) {
      

@@ -12,9 +12,11 @@ import com.zjb.mjgl.pojo.entity.AlertRecord;
 import com.zjb.mjgl.pojo.entity.AlertRule;
 import com.zjb.mjgl.pojo.entity.MoldAlertMessage;
 import com.zjb.mjgl.pojo.entity.Molds;
+import com.zjb.mjgl.common.BusinessConfigKeys;
 import com.zjb.mjgl.service.AlertMessageService;
 import com.zjb.mjgl.service.AlertRuleEngineService;
 import com.zjb.mjgl.service.AlertRuleService;
+import com.zjb.mjgl.service.SystemBusinessConfigService;
 import com.zjb.mjgl.utils.IdUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -36,6 +38,7 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class AlertRuleEngineServiceImpl implements AlertRuleEngineService {
 
+    private final SystemBusinessConfigService systemBusinessConfigService;
     private final RepairRecordMapper repairRecordMapper;
     private final MoldAbnormalRecordMapper moldAbnormalRecordMapper;
     private final TemperatureLogMapper temperatureLogMapper;
@@ -66,14 +69,14 @@ public class AlertRuleEngineServiceImpl implements AlertRuleEngineService {
     private void runRule(AlertRule rule, LocalDateTime now) {
         String source = rule.getSource();
         if ("repair".equals(source)) {
-            int days = Optional.ofNullable(rule.getDays()).orElse(30);
-            int threshold = Optional.ofNullable(rule.getThreshold()).orElse(3);
+            int days = Optional.ofNullable(rule.getDays()).orElseGet(() -> systemBusinessConfigService.getEffectiveInt(BusinessConfigKeys.ALERT_RULE_DEFAULT_DAYS));
+            int threshold = Optional.ofNullable(rule.getThreshold()).orElseGet(() -> systemBusinessConfigService.getEffectiveInt(BusinessConfigKeys.ALERT_RULE_DEFAULT_THRESHOLD));
             LocalDateTime since = now.minusDays(days);
             List<String> moldIds = repairRecordMapper.listMoldIdsWithRepairCountGeSince(since, threshold);
             moldIds.forEach(moldId -> ensureAlertForMold(rule, moldId, now));
         } else if ("abnormal".equals(source)) {
-            int days = Optional.ofNullable(rule.getDays()).orElse(30);
-            int threshold = Optional.ofNullable(rule.getThreshold()).orElse(3);
+            int days = Optional.ofNullable(rule.getDays()).orElseGet(() -> systemBusinessConfigService.getEffectiveInt(BusinessConfigKeys.ALERT_RULE_DEFAULT_DAYS));
+            int threshold = Optional.ofNullable(rule.getThreshold()).orElseGet(() -> systemBusinessConfigService.getEffectiveInt(BusinessConfigKeys.ALERT_RULE_DEFAULT_THRESHOLD));
             Date since = Date.from(now.minusDays(days).atZone(ZoneId.systemDefault()).toInstant());
             List<String> moldIds = moldAbnormalRecordMapper.listMoldIdsWithAbnormalCountGeSince(since, threshold);
             moldIds.forEach(moldId -> ensureAlertForMold(rule, moldId, now));
@@ -122,17 +125,17 @@ public class AlertRuleEngineServiceImpl implements AlertRuleEngineService {
 
         if ("repair".equals(source)) {
             alertType = AlertTypeEnum.FREQUENT_FAULT.getCode();
-            int days = Optional.ofNullable(rule.getDays()).orElse(30);
-            int threshold = Optional.ofNullable(rule.getThreshold()).orElse(3);
+            int days = Optional.ofNullable(rule.getDays()).orElseGet(() -> systemBusinessConfigService.getEffectiveInt(BusinessConfigKeys.ALERT_RULE_DEFAULT_DAYS));
+            int threshold = Optional.ofNullable(rule.getThreshold()).orElseGet(() -> systemBusinessConfigService.getEffectiveInt(BusinessConfigKeys.ALERT_RULE_DEFAULT_THRESHOLD));
             message = String.format("模具 %s（%s）在近%d天内维修/故障达到%d次，请关注。", moldName, moldCode, days, threshold);
         } else if ("abnormal".equals(source)) {
             alertType = AlertTypeEnum.FREQUENT_FAULT.getCode();
-            int days = Optional.ofNullable(rule.getDays()).orElse(30);
-            int threshold = Optional.ofNullable(rule.getThreshold()).orElse(3);
+            int days = Optional.ofNullable(rule.getDays()).orElseGet(() -> systemBusinessConfigService.getEffectiveInt(BusinessConfigKeys.ALERT_RULE_DEFAULT_DAYS));
+            int threshold = Optional.ofNullable(rule.getThreshold()).orElseGet(() -> systemBusinessConfigService.getEffectiveInt(BusinessConfigKeys.ALERT_RULE_DEFAULT_THRESHOLD));
             message = String.format("模具 %s（%s）在近%d天内异常记录达到%d次，请关注。", moldName, moldCode, days, threshold);
         } else if ("temperature".equals(source)) {
             alertType = AlertTypeEnum.TEMPERATURE_ANOMALY.getCode();
-            int days = Optional.ofNullable(rule.getTimeWindowMinutes()).orElse(7);
+            int days = Optional.ofNullable(rule.getTimeWindowMinutes()).orElseGet(() -> systemBusinessConfigService.getEffectiveInt(BusinessConfigKeys.ALERT_METRIC_DEFAULT_WINDOW_DAYS));
             String opDesc = compareOpDesc(rule.getCompareOp());
             if ("count".equals(rule.getTriggerMode())) {
                 int k = Optional.ofNullable(rule.getThreshold()).orElse(1);
@@ -144,7 +147,7 @@ public class AlertRuleEngineServiceImpl implements AlertRuleEngineService {
             }
         } else if ("lubrication".equals(source)) {
             alertType = AlertTypeEnum.LUBRICATION_ANOMALY.getCode();
-            int days = Optional.ofNullable(rule.getTimeWindowMinutes()).orElse(7);
+            int days = Optional.ofNullable(rule.getTimeWindowMinutes()).orElseGet(() -> systemBusinessConfigService.getEffectiveInt(BusinessConfigKeys.ALERT_METRIC_DEFAULT_WINDOW_DAYS));
             String fieldDesc = "oil_level_percent".equals(rule.getMetricField()) ? "液位" : "压力";
             String opDesc = compareOpDesc(rule.getCompareOp());
             if ("count".equals(rule.getTriggerMode())) {

@@ -1,5 +1,6 @@
 package com.zjb.mjgl.job;
 
+import com.zjb.mjgl.common.BusinessConfigKeys;
 import com.zjb.mjgl.common.enums.RoleEnum;
 import com.zjb.mjgl.mapper.MaintenanceReminderMapper;
 import com.zjb.mjgl.mapper.MoldsMapper;
@@ -11,7 +12,7 @@ import com.zjb.mjgl.service.AlertMessageService;
 import com.zjb.mjgl.service.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.scheduling.annotation.Scheduled;
+import com.zjb.mjgl.service.SystemBusinessConfigService;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
@@ -32,15 +33,13 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class MaintenanceReminderJob {
 
+    private final SystemBusinessConfigService systemBusinessConfigService;
     private final MaintenanceReminderMapper maintenanceReminderMapper;
     private final MoldsMapper moldsMapper;
     private final AlertMessageService alertMessageService;
     private final UserService userService;
 
-    /**
-     * 每天 03:00 扫描一次。
-     */
-    @Scheduled(cron = "0 0 3 * * ?")
+    /** 由 {@link BusinessJobScheduler} 按配置 Cron 调用 */
     public void checkReminders() {
         log.info("开始执行保养提醒定时任务");
         List<MaintenanceReminder> reminders = Optional
@@ -68,17 +67,20 @@ public class MaintenanceReminderJob {
         try {
             boolean needNotify = false;
 
-            // 按时间周期：在 5 天内到期
+            int daysBefore = systemBusinessConfigService.getEffectiveInt(BusinessConfigKeys.MAINTENANCE_REMINDER_DAYS_BEFORE_DUE);
+            int usageThreshold = systemBusinessConfigService.getEffectiveInt(BusinessConfigKeys.MAINTENANCE_REMINDER_REMAINING_USAGE);
+
+            // 按时间周期：在配置天数内到期
             if (Integer.valueOf(1).equals(r.getReminderType()) && r.getNextDueDate() != null) {
                 LocalDate dueDate = r.getNextDueDate().toInstant()
                         .atZone(ZoneId.systemDefault())
                         .toLocalDate();
                 long days = ChronoUnit.DAYS.between(today, dueDate);
-                if (days <= 5) {
+                if (days <= daysBefore) {
                     needNotify = true;
                 }
             }
-            // 按使用次数：剩余使用次数 <= 10
+            // 按使用次数：剩余模次不超过配置阈值
             else if (Integer.valueOf(2).equals(r.getReminderType())
                     && r.getNextDueCycles() != null
                     && r.getMoldId() != null) {
@@ -87,7 +89,7 @@ public class MaintenanceReminderJob {
                         .map(Molds::getTotalUsageCount)
                         .orElse(0);
                 int remaining = r.getNextDueCycles() - current;
-                if (remaining <= 10) {
+                if (remaining <= usageThreshold) {
                     needNotify = true;
                 }
             }
